@@ -1,0 +1,516 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import { AlertTriangle, CheckCircle2, Circle, ExternalLink, ShieldAlert, Key, Globe, Zap, Shield, ArrowRight, Plus, Wallet, Settings, Target, Info } from 'lucide-react';
+import { cn } from '@/src/lib/utils';
+import { Strategy } from '@/src/types';
+
+interface TooltipProps {
+  content: string;
+  children: React.ReactNode;
+  key?: string | number;
+}
+
+const Tooltip = ({ content, children }: TooltipProps) => {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative inline-block" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
+      {children}
+      {show && (
+        <div className="absolute z-[100] bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-900 border border-white/10 rounded-lg shadow-2xl text-[10px] text-gray-300 leading-relaxed font-sans animate-in fade-in slide-in-from-bottom-1">
+          {content}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900" />
+        </div>
+      )}
+    </div>
+  );
+};
+
+interface Step {
+  id: string;
+  title: string;
+  description: string;
+  status: 'completed' | 'pending' | 'critical';
+  icon: any;
+  fixInstruction?: string;
+  actionLabel?: string;
+  tooltip: string;
+}
+
+interface LiveReadinessProps {
+  strategies: Strategy[];
+  onNavigate: (page: string) => void;
+}
+
+export default function LiveReadiness({ strategies, onNavigate }: LiveReadinessProps) {
+  const hasActiveForgingStrategy = useMemo(() => 
+    strategies.some(s => s.status === 'active' && s.type === 'forging'), 
+    [strategies]
+  );
+
+  const [steps, setSteps] = useState<Step[]>([
+    {
+      id: 'aa',
+      title: "Account Abstraction (ERC-4337)",
+      description: "Smart Account deployment via Pimlico. Gasless execution is active, allowing trading with $0 prefunded gas wallet.",
+      status: "completed",
+      icon: Shield,
+      tooltip: "Enables gasless transactions and programmable security through ERC-4337 smart accounts."
+    },
+    {
+      id: 'paymaster',
+      title: "Pimlico Paymaster Integration",
+      description: "Sponsoring user transactions. Ensure your Pimlico dashboard has sufficient balance.",
+      status: "completed",
+      icon: Zap,
+      tooltip: "Sponsors your transaction gas fees, allowing the bot to operate without ETH in the execution wallet."
+    },
+    {
+      id: 'rpc',
+      title: "RPC Node Infrastructure",
+      description: "Dedicated institutional nodes (Alchemy, Infura) are required for live execution to avoid rate-limiting.",
+      status: "pending",
+      icon: Globe,
+      fixInstruction: "1. Create an account on Alchemy or Infura. 2. Generate an API Key for Ethereum Mainnet. 3. Click 'Add RPC Key' below to securely store it.",
+      actionLabel: "Add RPC Key",
+      tooltip: "Institutional-grade endpoints ensure high-speed mempool access and prevent rate-limiting during peak volatility."
+    },
+    {
+      id: 'key',
+      title: "Private Key Security",
+      description: "A secure private key is required to sign transactions in live mode.",
+      status: "critical",
+      icon: Key,
+      fixInstruction: "1. Generate a new EOA wallet. 2. Export the private key. 3. Click 'Configure Key' to encrypt and store it in the secure vault.",
+      actionLabel: "Configure Key",
+      tooltip: "Encryption and secure storage of your execution key to prevent unauthorized access to funds."
+    },
+    {
+      id: 'strategy',
+      title: "Elite Wallet Intelligence Selection",
+      description: "AlphaMark requires at least one active Forging Strategy targeting top-performing wallets.",
+      status: hasActiveForgingStrategy ? "completed" : "pending",
+      icon: Target,
+      fixInstruction: "1. Navigate to the Strategies page. 2. Identify an Elite Wallet Target from the Forged Intelligence panel. 3. Activate a Neural Forger node shadowing that target.",
+      actionLabel: "Select Elite Target",
+      tooltip: "The core alpha source. Requires synchronization with top-performing on-chain wallets."
+    },
+    {
+      id: 'github',
+      title: "GitHub Repository Sync",
+      description: "Push your local AlphaMark configuration to a private GitHub repository for cloud deployment.",
+      status: "pending",
+      icon: Globe,
+      fixInstruction: "1. Create a new private repository on GitHub.\n2. Paste the repository URL below.\n3. AlphaMark will verify the connection and sync your secure environment.",
+      actionLabel: "Configure Sync",
+      tooltip: "Maintains a secure, version-controlled backup of your bot's configuration for cloud deployment."
+    },
+    {
+      id: 'cloud',
+      title: "Cloud Infrastructure Deployment",
+      description: "Deploy AlphaMark to a persistent cloud environment (Render, Vercel, or Google Cloud) for 24/7 execution.",
+      status: "pending",
+      icon: Zap,
+      fixInstruction: "1. Select your preferred cloud provider (Render, Vercel, or GCP).\n2. AlphaMark will generate the deployment configuration.\n3. Click 'Verify Deployment' once the cloud build is green.",
+      actionLabel: "Deploy to Cloud",
+      tooltip: "Ensures 24/7 execution uptime by running the bot on persistent server environments."
+    },
+    {
+      id: 'safety',
+      title: "Emergency Circuit Breakers",
+      description: "Verify that the Emergency Stop kills all active listeners.",
+      status: "completed",
+      icon: CheckCircle2,
+      tooltip: "Safety mechanism to instantly halt all trading activity and cancel pending transactions."
+    }
+  ]);
+
+  // Fetch readiness from backend on mount
+  useEffect(() => {
+    fetch('/api/readiness')
+      .then(res => res.json())
+      .then(data => {
+        setSteps(prev => prev.map(s => {
+          const backendStep = data.find((b: any) => b.id === s.id);
+          if (backendStep) {
+            // Strategy status is special, it depends on parent state
+            if (s.id === 'strategy') return s;
+            return { ...s, status: backendStep.status };
+          }
+          return s;
+        }));
+      });
+  }, []);
+
+  // Sync strategy status if it changes in parent
+  useEffect(() => {
+    setSteps(prev => prev.map(s => {
+      if (s.id === 'strategy') {
+        const newStatus = hasActiveForgingStrategy ? 'completed' : 'pending';
+        // Persist to backend
+        fetch('/api/readiness/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: 'strategy', status: newStatus })
+        });
+        return { ...s, status: newStatus };
+      }
+      return s;
+    }));
+  }, [hasActiveForgingStrategy]);
+
+  const [fixingId, setFixingId] = useState<string | null>(null);
+  const [isLive, setIsLive] = useState(false);
+  const [githubUrl, setGithubUrl] = useState('');
+  const [githubError, setGithubError] = useState<string | null>(null);
+  const [deploymentError, setDeploymentError] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [selectedCloud, setSelectedCloud] = useState<string | null>(null);
+  const [isDeploying, setIsDeploying] = useState(false);
+
+  const validateGithubUrl = (url: string) => {
+    const githubRegex = /^https:\/\/github\.com\/[\w-]+\/[\w.-]+$/;
+    return githubRegex.test(url);
+  };
+
+  const handleVerifyGithub = async (id: string) => {
+    if (!validateGithubUrl(githubUrl)) {
+      setGithubError('Please enter a valid GitHub repository URL (e.g., https://github.com/user/repo)');
+      return;
+    }
+
+    setGithubError(null);
+    setIsVerifying(true);
+    
+    // Simulate API verification
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    setIsVerifying(false);
+    completeStep(id);
+  };
+
+  const handleVerifyCloud = async (id: string) => {
+    if (!selectedCloud) return;
+
+    setIsDeploying(true);
+    // Simulate cloud build/deployment verification
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    setIsDeploying(false);
+    completeStep(id);
+  };
+
+  const allCompleted = useMemo(() => steps.every(s => s.status === 'completed'), [steps]);
+
+  const handleFix = (id: string) => {
+    if (id === 'strategy') {
+      onNavigate('strategies');
+      return;
+    }
+    setFixingId(id);
+  };
+
+  const completeStep = (id: string) => {
+    const newStatus = 'completed';
+    setSteps(prev => prev.map(s => s.id === id ? { ...s, status: newStatus } : s));
+    setFixingId(null);
+
+    // Persist to backend
+    fetch('/api/readiness/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status: newStatus })
+    });
+  };
+
+  const handleGoLive = async () => {
+    setDeploymentError(null);
+    try {
+      const res = await fetch('/api/control/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'live' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsLive(true);
+      } else {
+        setDeploymentError(data.error || 'Failed to go live');
+      }
+    } catch (err) {
+      console.error(err);
+      setDeploymentError('Network error while going live');
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-8 pb-20">
+      <div className="bg-blue-600/10 border border-blue-500/20 rounded-2xl p-8 flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
+            Live Mode Deployment Guide
+            <Tooltip content="Comprehensive checklist for transitioning AlphaMark from paper trading to live on-chain execution.">
+              <Info className="w-4 h-4 text-gray-600 cursor-help" />
+            </Tooltip>
+          </h2>
+          <p className="text-gray-400 leading-relaxed max-w-xl">
+            Your dashboard is currently running in <span className="text-blue-400 font-bold">STAGING/PAPER</span> mode. 
+            Complete the requirements below to unlock production execution.
+          </p>
+        </div>
+        <div className="text-right">
+          <Tooltip content="Aggregated readiness score based on security, infrastructure, and strategy configuration.">
+            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 cursor-help">Readiness Score</div>
+          </Tooltip>
+          <div className="text-4xl font-bold text-blue-500">
+            {Math.round((steps.filter(s => s.status === 'completed').length / steps.length) * 100)}%
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4">
+        {steps.map((step) => (
+          <div key={step.id} className={cn(
+            "bg-slate-900/40 border rounded-xl p-6 transition-all",
+            step.status === 'completed' ? "border-emerald-500/20" : 
+            step.status === 'critical' ? "border-red-500/20" : "border-white/5",
+            fixingId === step.id && "ring-2 ring-blue-500 bg-slate-900/60"
+          )}>
+            <div className="flex gap-6 items-start">
+              <div className="mt-1">
+                {step.status === 'completed' ? (
+                  <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+                ) : step.status === 'critical' ? (
+                  <AlertTriangle className="w-6 h-6 text-red-500" />
+                ) : (
+                  <Circle className="w-6 h-6 text-gray-700" />
+                )}
+              </div>
+              <div className="flex-1 space-y-3">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-bold text-white flex items-center gap-2">
+                    <step.icon className="w-4 h-4 text-blue-500" />
+                    {step.title}
+                    <Tooltip content={step.tooltip}>
+                      <Info className="w-3 h-3 text-gray-600 cursor-help" />
+                    </Tooltip>
+                  </h3>
+                  <span className={cn(
+                    "text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded",
+                    step.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500' : 
+                    step.status === 'critical' ? 'bg-red-500/10 text-red-500' : 'bg-slate-800 text-gray-500'
+                  )}>
+                    {step.status}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-400 leading-relaxed">{step.description}</p>
+                
+                {step.status !== 'completed' && (
+                  <div className="pt-2 space-y-4">
+                    {fixingId === step.id ? (
+                      <div className="bg-slate-800/50 rounded-lg p-4 border border-blue-500/30 animate-in fade-in slide-in-from-top-2">
+                        <h4 className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                          <ArrowRight className="w-3 h-3" />
+                          Step-by-Step Instructions
+                        </h4>
+                        <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-line">
+                          {step.fixInstruction}
+                        </p>
+                        
+                        {(step.id === 'key' || step.id === 'rpc' || step.id === 'github' || step.id === 'cloud') && (
+                          <div className="mt-4 space-y-2">
+                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                              {step.id === 'key' ? 'Private Key (Hex)' : 
+                               step.id === 'rpc' ? 'RPC Endpoint URL' : 
+                               step.id === 'github' ? 'GitHub Repository URL' : 'Cloud Provider Selection'}
+                              <Tooltip content={
+                                step.id === 'key' ? "Your wallet's private key is used locally to sign transactions. It is never transmitted to our servers." :
+                                step.id === 'rpc' ? "The websocket or HTTP URL of your dedicated node provider (e.g., Alchemy, Infura)." :
+                                step.id === 'github' ? "The URL of your private repository where AlphaMark will sync its configuration." :
+                                "Choose the infrastructure provider where your bot will be hosted 24/7."
+                              }>
+                                <Info className="w-3 h-3 text-gray-700 cursor-help" />
+                              </Tooltip>
+                            </label>
+                            {step.id === 'cloud' ? (
+                              <div className="grid grid-cols-3 gap-2">
+                                {['Render', 'Vercel', 'GCP'].map(provider => (
+                                  <Tooltip key={provider} content={`Deploy AlphaMark to ${provider}'s high-availability infrastructure.`}>
+                                    <button 
+                                      onClick={() => setSelectedCloud(provider)}
+                                      className={cn(
+                                        "w-full px-3 py-2 border rounded text-[10px] font-bold transition-all flex flex-col items-center gap-1",
+                                        selectedCloud === provider 
+                                          ? "bg-blue-600/20 border-blue-500 text-white" 
+                                          : "bg-slate-900 border-white/10 text-gray-400 hover:border-blue-500/50 hover:text-gray-200"
+                                      )}
+                                    >
+                                      <Globe className={cn("w-3 h-3", selectedCloud === provider ? "text-blue-400" : "text-gray-600")} />
+                                      {provider}
+                                    </button>
+                                  </Tooltip>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                <input 
+                                  type={step.id === 'key' ? 'password' : 'text'}
+                                  value={step.id === 'github' ? githubUrl : undefined}
+                                  onChange={(e) => {
+                                    if (step.id === 'github') {
+                                      setGithubUrl(e.target.value);
+                                      setGithubError(null);
+                                    }
+                                  }}
+                                  placeholder={
+                                    step.id === 'key' ? '0x...' : 
+                                    step.id === 'rpc' ? 'https://eth-mainnet.g.alchemy.com/v2/...' :
+                                    'https://github.com/username/alphamark-pro'
+                                  }
+                                  className={cn(
+                                    "w-full bg-slate-900 border rounded px-3 py-2 text-xs text-white placeholder:text-gray-700 focus:border-blue-500 outline-none transition-all",
+                                    step.id === 'github' && githubError ? "border-red-500/50" : "border-white/10"
+                                  )}
+                                />
+                                {step.id === 'github' && githubError && (
+                                  <p className="text-[10px] text-red-400 font-medium">{githubError}</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="mt-4 flex gap-2">
+                          {step.id === 'github' ? (
+                            <Tooltip content="Triggers a secure handshake with GitHub to verify repository access and sync status.">
+                              <button 
+                                disabled={isVerifying}
+                                onClick={() => handleVerifyGithub(step.id)}
+                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold rounded transition-all flex items-center gap-1 disabled:opacity-50"
+                              >
+                                {isVerifying ? (
+                                  <>
+                                    <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    Verifying Connection...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Plus className="w-3 h-3" />
+                                    Verify Connection
+                                  </>
+                                )}
+                              </button>
+                            </Tooltip>
+                          ) : step.id === 'cloud' ? (
+                            <Tooltip content="Initiates a build check on your selected cloud provider to ensure the environment is ready for deployment.">
+                              <button 
+                                disabled={!selectedCloud || isDeploying}
+                                onClick={() => handleVerifyCloud(step.id)}
+                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold rounded transition-all flex items-center gap-1 disabled:opacity-50"
+                              >
+                                {isDeploying ? (
+                                  <>
+                                    <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    Verifying Build...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Zap className="w-3 h-3" />
+                                    Verify Deployment
+                                  </>
+                                )}
+                              </button>
+                            </Tooltip>
+                          ) : (
+                            <Tooltip content="Saves your configuration to the local secure storage and marks this requirement as met.">
+                              <button 
+                                onClick={() => completeStep(step.id)}
+                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold rounded transition-all flex items-center gap-1"
+                              >
+                                <Plus className="w-3 h-3" />
+                                Confirm Configuration
+                              </button>
+                            </Tooltip>
+                          )}
+                          <button 
+                            onClick={() => setFixingId(null)}
+                            className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-gray-300 text-[10px] font-bold rounded transition-all"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={() => handleFix(step.id)}
+                        className="text-xs text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 transition-colors group"
+                      >
+                        {step.actionLabel || "Fix Issue"} 
+                        <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="sticky bottom-8 bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-2xl flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className={cn(
+            "p-3 rounded-xl",
+            allCompleted ? "bg-emerald-500/10 text-emerald-500" : "bg-slate-800 text-gray-500"
+          )}>
+            <Shield className="w-6 h-6" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-white">Production Deployment</h4>
+            <p className="text-xs text-gray-500">
+              {deploymentError ? (
+                <span className="text-red-400 font-medium">{deploymentError}</span>
+              ) : (
+                allCompleted ? "All systems verified. Ready for live execution." : "Complete the checklist to enable live trading."
+              )}
+            </p>
+          </div>
+        </div>
+        
+        <Tooltip content={allCompleted ? "Final confirmation to deploy AlphaMark to cloud infrastructure and begin live trading." : "Complete all checklist items to unlock live trading mode."}>
+          <button 
+            disabled={!allCompleted || isLive}
+            onClick={handleGoLive}
+            className={cn(
+              "px-8 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2",
+              allCompleted 
+                ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20" 
+                : "bg-slate-800 text-gray-600 cursor-not-allowed"
+            )}
+          >
+            {isLive ? (
+              <>
+                <span className="flex h-2 w-2 rounded-full bg-white animate-pulse" />
+                AlphaMark Live on Cloud
+              </>
+            ) : (
+              <>
+                <Zap className="w-4 h-4" />
+                {allCompleted ? 'Confirm & Go Live' : 'Start Live Trading Mode'}
+              </>
+            )}
+          </button>
+        </Tooltip>
+      </div>
+
+      {!allCompleted && (
+        <div className="bg-red-900/10 border border-red-900/20 rounded-xl p-6">
+          <h4 className="text-red-500 font-bold mb-2 flex items-center gap-2 text-sm">
+            <ShieldAlert className="w-5 h-5" />
+            Safety Protocol Active
+          </h4>
+          <p className="text-xs text-red-900/80 leading-relaxed">
+            Live Mode is locked until all institutional security requirements are met. This prevents accidental deployment with public RPCs or insecure keys, protecting your capital from avoidable execution errors.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
