@@ -8,6 +8,7 @@ All deployments MUST use the following environment variables. Never hardcode sec
 | Variable | Description | Source |
 |----------|-------------|--------|
 | `GEMINI_API_KEY` | AI Copilot Intelligence | Google AI Studio |
+| `OPENAI_API_KEY` | Fallback AI API for redundancy | OpenAI Platform |
 | `PIMLICO_API_KEY` | Account Abstraction Paymaster | Pimlico Dashboard |
 | `PIMLICO_BUNDLER_URL` | ERC-4337 Bundler Endpoint | Pimlico Dashboard |
 | `NODE_ENV` | Set to `production` | Deployment Platform |
@@ -18,7 +19,7 @@ All deployments MUST use the following environment variables. Never hardcode sec
 1. **New Web Service**: Connect your GitHub repo.
 2. **Build Command**: `npm run build`
 3. **Start Command**: `npm start` (Ensure `server.ts` is compiled or run via `tsx`)
-4. **Environment Variables**: Add all keys from `.env.example`.
+4. **Environment Variables**: Add all required keys from the Environment Configuration table above.
 
 ### B. Google Cloud Run (Enterprise Grade)
 1. **Dockerize**: Use a multi-stage `Dockerfile` (Node 20+).
