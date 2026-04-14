@@ -179,23 +179,24 @@ router.post("/ai/query", async (req, res) => {
 
   try {
     const { GoogleGenAI } = await import("@google/genai");
-    const genAI = new GoogleGenAI(apiKey);
-    const model = genAI.getGenerativeModel({ 
+    const genAI = new GoogleGenAI({ apiKey });
+    const response = await genAI.models.generateContent({
       model: "gemini-1.5-flash",
-      systemInstruction: `
-        You are AlphaMark AI, an institutional-grade trading assistant. 
-        Current User Telemetry:
-        - Total Profit: ${stats?.totalProfit.toFixed(4)} ETH (Equivalent to $${(stats?.totalProfit * (stats?.ethPrice || 2500)).toLocaleString()})
-        - Current ETH Price: $${stats?.ethPrice || 'N/A'}
-        - Trading Win Rate: ${stats?.winRate?.toFixed(1)}%
-        - Execution Success: ${stats?.totalTrades} completed trades.
-        
-        CRITICAL: Always refer to profit in ETH unless specifically asked for USD. Never confuse the two.
-      `
-    });
+      contents: prompt,
+      config: {
+        systemInstruction: `
+          You are AlphaMark AI, an institutional-grade trading assistant.
+          Current User Telemetry:
+          - Total Profit: ${stats?.totalProfit.toFixed(4)} ETH (Equivalent to $${(stats?.totalProfit * (stats?.ethPrice || 2500)).toLocaleString()})
+          - Current ETH Price: $${stats?.ethPrice || 'N/A'}
+          - Trading Win Rate: ${stats?.winRate?.toFixed(1)}%
+          - Execution Success: ${stats?.totalTrades} completed trades.
 
-    const result = await model.generateContent(prompt);
-    res.json({ response: result.response.text() });
+          CRITICAL: Always refer to profit in ETH unless specifically asked for USD. Never confuse the two.
+        `
+      }
+    });
+    res.json({ response: response.text });
   } catch (error: any) {
     console.error("AI Proxy Error:", error);
     res.status(500).json({ error: "Failed to process AI query." });

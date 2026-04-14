@@ -79,7 +79,6 @@ class Database {
     totalTrades: 245,
     learningProgress: 88,
     shadowedWallets: 8,
-    activeOpps: 12,
     avgLatency: 32,
     botSystem: {
       scanners: 4,
@@ -263,6 +262,7 @@ class Database {
       totalTrades: 0,
       learningProgress: 0,
       shadowedWallets: 0,
+      avgLatency: 0,
       botSystem: {
         scanners: 0,
         orchestrators: 0,
