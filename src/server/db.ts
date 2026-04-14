@@ -79,6 +79,7 @@ class Database {
     totalTrades: 245,
     learningProgress: 88,
     shadowedWallets: 8,
+    activeOpps: 12,
     avgLatency: 32,
     botSystem: {
       scanners: 4,
@@ -242,6 +243,9 @@ class Database {
       // Update average latency (weighted by total trades)
       const currentLatency = 15 + Math.random() * 25; // Simulated latency
       this.stats.avgLatency = ((this.stats.avgLatency * (this.stats.totalTrades - 1)) + currentLatency) / this.stats.totalTrades;
+      
+      // Update active opportunities for scanner scaling
+      this.stats.activeOpps = 8 + Math.floor(Math.random() * 15);
 
       this.save();
     }

@@ -42,6 +42,7 @@ export interface Stats {
   totalTrades: number;
   learningProgress: number;
   shadowedWallets: number;
+  activeOpps: number;
   avgLatency: number; // ms
   botSystem: BotSystem;
   chartData: { time: string; profit: number }[];
