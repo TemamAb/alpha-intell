@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import OpenAI from 'openai';
 import { db } from './db';
 import { engine } from './engine';
 
@@ -171,32 +172,77 @@ router.get("/trades/stream", (req, res) => {
 // AI Copilot Proxy (Prevents API Key Leakage)
 router.post("/ai/query", async (req, res) => {
   const { prompt, stats } = req.body;
-  const apiKey = process.env.GEMINI_API_KEY;
+  const geminiKey = process.env.GEMINI_API_KEY;
+  const openaiKey = process.env.OPENAI_API_KEY;
 
-  if (!apiKey) {
-    return res.status(500).json({ error: "Gemini API Key not configured on server." });
+  if (!geminiKey && !openaiKey) {
+    return res.status(500).json({ error: "No AI API keys configured on server." });
   }
 
   try {
-    const { GoogleGenAI } = await import("@google/genai");
-    const genAI = new GoogleGenAI({ apiKey });
-    const response = await genAI.models.generateContent({
-      model: "gemini-1.5-flash",
-      contents: prompt,
-      config: {
-        systemInstruction: `
-          You are AlphaMark AI, an institutional-grade trading assistant.
-          Current User Telemetry:
-          - Total Profit: ${stats?.totalProfit.toFixed(4)} ETH (Equivalent to $${(stats?.totalProfit * (stats?.ethPrice || 2500)).toLocaleString()})
-          - Current ETH Price: $${stats?.ethPrice || 'N/A'}
-          - Trading Win Rate: ${stats?.winRate?.toFixed(1)}%
-          - Execution Success: ${stats?.totalTrades} completed trades.
+    let responseText = '';
 
-          CRITICAL: Always refer to profit in ETH unless specifically asked for USD. Never confuse the two.
-        `
+    // Try Gemini first
+    if (geminiKey) {
+      try {
+        const { GoogleGenAI } = await import("@google/genai");
+        const genAI = new GoogleGenAI({ apiKey: geminiKey });
+        const response = await genAI.models.generateContent({
+          model: "gemini-1.5-flash",
+          contents: prompt,
+          config: {
+            systemInstruction: `
+              You are AlphaMark AI, an institutional-grade trading assistant.
+              Current User Telemetry:
+              - Total Profit: ${stats?.totalProfit.toFixed(4)} ETH (Equivalent to $${(stats?.totalProfit * (stats?.ethPrice || 2500)).toLocaleString()})
+              - Current ETH Price: $${stats?.ethPrice || 'N/A'}
+              - Trading Win Rate: ${stats?.winRate?.toFixed(1)}%
+              - Execution Success: ${stats?.totalTrades} completed trades.
+
+              CRITICAL: Always refer to profit in ETH unless specifically asked for USD. Never confuse the two.
+            `
+          }
+        });
+        responseText = response.text;
+      } catch (geminiError) {
+        console.warn("Gemini API failed, trying OpenAI fallback:", geminiError.message);
       }
-    });
-    res.json({ response: response.text });
+    }
+
+    // Fallback to OpenAI if Gemini failed or not available
+    if (!responseText && openaiKey) {
+      try {
+        const openai = new OpenAI({ apiKey: openaiKey });
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4",
+          messages: [
+            {
+              role: "system",
+              content: `
+                You are AlphaMark AI, an institutional-grade trading assistant.
+                Current User Telemetry:
+                - Total Profit: ${stats?.totalProfit.toFixed(4)} ETH (Equivalent to $${(stats?.totalProfit * (stats?.ethPrice || 2500)).toLocaleString()})
+                - Current ETH Price: $${stats?.ethPrice || 'N/A'}
+                - Trading Win Rate: ${stats?.winRate?.toFixed(1)}%
+                - Execution Success: ${stats?.totalTrades} completed trades.
+
+                CRITICAL: Always refer to profit in ETH unless specifically asked for USD. Never confuse the two.
+              `
+            },
+            { role: "user", content: prompt }
+          ]
+        });
+        responseText = completion.choices[0]?.message?.content || "No response from OpenAI.";
+      } catch (openaiError) {
+        console.error("OpenAI API fallback also failed:", openaiError.message);
+      }
+    }
+
+    if (!responseText) {
+      throw new Error("All AI services failed");
+    }
+
+    res.json({ response: responseText });
   } catch (error: any) {
     console.error("AI Proxy Error:", error);
     res.status(500).json({ error: "Failed to process AI query." });
