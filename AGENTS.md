@@ -13,7 +13,37 @@ All deployments MUST use the following environment variables. Never hardcode sec
 | `PIMLICO_BUNDLER_URL` | ERC-4337 Bundler Endpoint | Pimlico Dashboard |
 | `NODE_ENV` | Set to `production` | Deployment Platform |
 
-## 2. Platform-Specific Workflows
+## 2. Current System Status
+
+### ⚠️ **Simulation Mode Active**
+**Important**: AlphaMark Pro currently operates in **100% simulation/paper trading mode**. All trading activities, profits, and balances displayed are **fabricated for demonstration purposes**. No real blockchain transactions, wallet operations, or on-chain executions occur.
+
+**What Works in Simulation:**
+- ✅ Real-time trade simulation (every 8 seconds)
+- ✅ Dynamic profit/loss calculations
+- ✅ Multi-chain protocol routing
+- ✅ MEV bundle simulation
+- ✅ AI copilot integration
+- ✅ Dashboard telemetry
+
+**Missing for Live Trading:**
+- ❌ Real blockchain RPC interactions
+- ❌ Wallet signature operations
+- ❌ Smart contract executions
+- ❌ Pimlico bundler submissions
+- ❌ On-chain balance verification
+
+**Live Trading Readiness Checklist:**
+- [ ] Implement viem/ethers for blockchain calls
+- [ ] Add wallet private key management (secure)
+- [ ] Integrate Pimlico ERC-4337 bundler
+- [ ] Connect to production RPC providers
+- [ ] Add real transaction broadcasting
+- [ ] Implement on-chain balance monitoring
+
+**To Enable Live Trading**: Contact the development team for blockchain integration implementation.
+
+## 4. Platform-Specific Workflows
 
 ### A. Render (Recommended for Full-Stack)
 1. **New Web Service**: Connect your GitHub repo.
@@ -39,16 +69,17 @@ All deployments MUST use the following environment variables. Never hardcode sec
 2. **Build**: `npm run build`.
 3. **Output**: `dist`.
 
-## 3. Security Hardening
+## 5. Security Hardening
 - **Private Key Management**: In production, use a Secret Manager (AWS Secrets Manager, GCP Secret Manager) instead of `.env`.
 - **RPC Rotation**: Implement a fallback mechanism for RPC providers to prevent single-point-of-failure.
 - **Rate Limiting**: Enable Express rate limiting on `/api/control/*` endpoints.
 
-## 4. Post-Deployment Checklist
+## 6. Post-Deployment Checklist
 - [ ] Verify SSL/TLS is active.
-- [ ] Test Account Abstraction (AA) wallet initialization.
-- [ ] Confirm Paymaster has sufficient gas balance.
-- [ ] Validate RPC quota tracking is active.
+- [ ] Confirm simulation mode is active (no real transactions).
+- [ ] Test AI copilot functionality.
+- [ ] Validate dashboard telemetry updates.
+- [ ] For future live trading: Implement real blockchain integration.
 
 ---
 *Standardized by AlphaMark AI Agent v2.0*
