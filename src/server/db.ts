@@ -59,27 +59,27 @@ class Database {
   ];
 
   private strategies: Strategy[] = [
-    { 
-      id: 's1', 
-      name: 'Neural Forger: L1 Alpha Shadow', 
-      type: 'forging', 
-      status: 'active', 
-      config: { 
-        minProfitThreshold: 0.04, 
+    {
+      id: 's1',
+      name: 'Neural Forger: L1 Alpha Shadow',
+      type: 'forging',
+      status: 'active',
+      config: {
+        minProfitThreshold: 0.04,
         maxBribePercent: 70,
-        shadowTarget: '0xMEV_Elite_1'
-      } 
+        shadowTarget: '0xPlaceholder1'
+      }
     },
-    { 
-      id: 's2', 
-      name: 'Cross-Chain Forging: Polygon/BSC', 
-      type: 'forging', 
-      status: 'active', 
-      config: { 
-        minProfitThreshold: 0.02, 
+    {
+      id: 's2',
+      name: 'Cross-Chain Forging: Polygon/BSC',
+      type: 'forging',
+      status: 'active',
+      config: {
+        minProfitThreshold: 0.02,
         maxBribePercent: 70,
-        shadowTarget: '0xMEV_Elite_2'
-      } 
+        shadowTarget: '0xPlaceholder2'
+      }
     }
   ];
 
@@ -192,53 +192,53 @@ private saveTimeout: NodeJS.Timeout | null = null;
   }
 
   private targetWallets: TargetWallet[] = [
-    { 
-      address: '0xMEV_Elite_1', 
-      label: 'Uniswap Sniper', 
+    {
+      address: '0xPlaceholder1',
+      label: 'Placeholder Target 1',
       chain: 'Ethereum',
-      strategies: ['Flash Swap', 'JIT Liquidity'],
-      profitPerTrade: 0.12,
-      tradesPerHour: 12.4,
-      totalProfitDay: 35.8,
-      profitLast30Days: 842.1,
-      forgingEfficiency: 92.4,
-      winRate: 94.2,
-      daysActive: 156,
-      isMevResistant: true,
-      avgSlippageTolerance: 0.1,
-      executionLatency: 28
-    },
-    { 
-      address: '0xMEV_Elite_2', 
-      label: 'Curve Arbitrageur', 
-      chain: 'Polygon',
-      strategies: ['Stable Swap', 'Cross-Pool'],
-      profitPerTrade: 0.04,
-      tradesPerHour: 45.2,
-      totalProfitDay: 42.1,
-      profitLast30Days: 1250.4,
-      forgingEfficiency: 88.5,
-      winRate: 89.8,
-      daysActive: 242,
-      isMevResistant: true,
-      avgSlippageTolerance: 0.05,
-      executionLatency: 14
+      strategies: ['Arbitrage'],
+      profitPerTrade: 0,
+      tradesPerHour: 0,
+      totalProfitDay: 0,
+      profitLast30Days: 0,
+      forgingEfficiency: 0,
+      winRate: 0,
+      daysActive: 0,
+      isMevResistant: false,
+      avgSlippageTolerance: 0,
+      executionLatency: 0
     },
     {
-      address: '0xMEV_Elite_3',
-      label: 'Flash Loan King',
+      address: '0xPlaceholder2',
+      label: 'Placeholder Target 2',
+      chain: 'Polygon',
+      strategies: ['Arbitrage'],
+      profitPerTrade: 0,
+      tradesPerHour: 0,
+      totalProfitDay: 0,
+      profitLast30Days: 0,
+      forgingEfficiency: 0,
+      winRate: 0,
+      daysActive: 0,
+      isMevResistant: false,
+      avgSlippageTolerance: 0,
+      executionLatency: 0
+    },
+    {
+      address: '0xPlaceholder3',
+      label: 'Placeholder Target 3',
       chain: 'BSC',
-      strategies: ['Multi-Hop', 'Flash Loan'],
-      profitPerTrade: 0.45,
-      tradesPerHour: 2.1,
-      totalProfitDay: 22.4,
-      profitLast30Days: 615.2,
-      forgingEfficiency: 95.1,
-      winRate: 98.5,
-      daysActive: 89,
-      isMevResistant: true,
-      avgSlippageTolerance: 0.2,
-      executionLatency: 42
+      strategies: ['Arbitrage'],
+      profitPerTrade: 0,
+      tradesPerHour: 0,
+      totalProfitDay: 0,
+      profitLast30Days: 0,
+      forgingEfficiency: 0,
+      winRate: 0,
+      daysActive: 0,
+      isMevResistant: false,
+      avgSlippageTolerance: 0,
+      executionLatency: 0
     }
   ];
 
