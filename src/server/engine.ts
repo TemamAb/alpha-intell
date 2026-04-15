@@ -7,8 +7,7 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { toSimpleSmartAccount } from "permissionless/accounts";
 import { createSmartAccountClient, SmartAccountClient } from "permissionless";
 
-const UNISWAP_V3_POOL_ABI = parseAbi(['function slot0() external view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked)']);
-
+const V3_ABI = parseAbi(['function slot0() external view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked)']);
 
 export interface BlockchainEvent {
   id: string;
@@ -62,14 +61,11 @@ class TradingEngine {
     });
   }
 
-
-    if (this.interval) {
-      console.log('[ENGINE] Already running');
-      return;
-    }
+  async start() {
+    if (this.interval) return;
     
     const status = db.getEngineStatus();
-    console.log(`[ENGINE] Mode: ${status.mode}`);
+    console.log(`Engine started in ${status.mode} mode`);
 
     if (status.mode === 'live') {
       // --- AUTOPILOT INITIALIZATION ---
@@ -84,13 +80,8 @@ class TradingEngine {
         }
       }
 
-      console.log('[ENGINE] Running ACID TEST...');
       const success = await this.performAcidTest();
-      if (!success) {
-        console.error('[ENGINE] ACID TEST FAILED - No block watcher started');
-        return;
-      }
-      console.log('[ENGINE] ACID TEST PASSED ✅');
+      if (!success) return;
       db.resetStats();
       
       // Initialize Price Oracle
@@ -166,12 +157,12 @@ class TradingEngine {
           const [slot0A, slot0B] = await Promise.all([
             this.publicClient.readContract({
               address: poolA as `0x${string}`,
-              abi: UNISWAP_V3_POOL_ABI,
+              abi: V3_ABI,
               functionName: 'slot0'
             }),
             this.publicClient.readContract({
               address: poolB as `0x${string}`,
-              abi: UNISWAP_V3_POOL_ABI,
+              abi: V3_ABI,
               functionName: 'slot0'
             })
           ]);
@@ -261,16 +252,13 @@ if (activeStrategy.type === 'forging') {
   }
 
   private async performAcidTest() {
-    console.log('🔬 [ACID TEST] Starting full validation...');
+    console.log('--- [ACID TEST] LIVE MODE VALIDATION ---');
     
     try {
-      console.log('[ACID] RPC test...');
       // 1. Infrastructure Validation
       const chainId = await this.publicClient.getChainId();
-      console.log(`[ACID] Chain ID: ${chainId}`);
       const blockNumber = await this.publicClient.getBlockNumber();
-      console.log(`[ACID] Latest block: ${blockNumber}`);
-      this.currentBlock = Number(blockNumber);
+      this.currentBlock = Number(blockNumber); // Ensure currentBlock is set
 
       const readiness = db.getVerifiedReadiness();
       const criticalSteps = ['rpc', 'blockchain', 'wallet'];
@@ -289,7 +277,6 @@ if (activeStrategy.type === 'forging') {
       }
       
       const decryptedKey = db.getDecryptedKey(wallets[0].id);
-      console.log(`[ACID] Wallet count: ${wallets.length}, Decrypted key: ${decryptedKey ? decryptedKey.slice(0,10)+'...' : 'MISSING'}`);
       if (!decryptedKey) {
         throw new Error("Could not retrieve or decrypt execution key. Ensure ENCRYPTION_SECRET is set and key is valid.");
       }
@@ -303,10 +290,8 @@ if (activeStrategy.type === 'forging') {
       });
 
       const cloudBundlerUrl = process.env.PIMLICO_BUNDLER_URL;
-      console.log(`[ACID] Pimlico Bundler: ${cloudBundlerUrl ? 'OK' : 'MISSING'}`);
       if (!cloudBundlerUrl) throw new Error("PIMLICO_BUNDLER_URL missing.");
       const paymasterUrl = process.env.PIMLICO_PAYMASTER_URL || cloudBundlerUrl;
-      console.log(`[ACID] Paymaster: ${paymasterUrl}`);
 
       // @ts-ignore
       try {

@@ -10,7 +10,7 @@ const CHAINLINK_ETH_USD_ABI = parseAbi([
 const CHAINLINK_ETH_USD_ADDRESS = '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419';
 
 // Architect Fix: Ensure path aligns with Render Persistent Disk mount point (/data)
-const DB_PATH = process.env.NODE_ENV === 'production' ? '/data/db.json' : path.join(process.cwd(), 'data', 'db_fixed.json');
+const DB_PATH = process.env.NODE_ENV === 'production' ? '/data/db.json' : path.join(process.cwd(), 'data', 'db.json');
 
 class Database {
   private readiness: ReadinessStep[] = [    { id: 'aa', status: 'pending' },
@@ -496,7 +496,7 @@ private saveTimeout: NodeJS.Timeout | null = null;
   }
 
   updateTargetWalletMetrics(address: string, tradesPerHour: number) {
-    const target = this.targetWallets.find(t => t.address.toLowerCase() === address.toLowerCase());
+    const target = this.targetWallets.find(t => t.address && t.address.toLowerCase() === address.toLowerCase());
     if (target) {
       target.tradesPerHour = tradesPerHour;
       target.totalProfitDay = parseFloat((tradesPerHour * target.profitPerTrade).toFixed(3));
@@ -507,7 +507,6 @@ private saveTimeout: NodeJS.Timeout | null = null;
   updateSystemMetrics(cpu: number, mem: number) {
     this.stats.botSystem.cpuUsage = cpu;
     this.stats.botSystem.memoryUsage = mem;
-    // Save is handled by general throttled loop
   }
 }
 

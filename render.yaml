@@ -5,11 +5,11 @@ services:
     env: node
     plan: standard
     buildCommand: npm install && npm run build
-     startCommand: npm start
-     disk:
-       name: alphamark-data
-       mountPath: /data
-       sizeGB: 1
+    startCommand: npm start
+    disk:
+      name: alphamark-data
+      mountPath: /data
+      sizeGB: 1
      envVars:
        - key: NODE_ENV
          value: production
