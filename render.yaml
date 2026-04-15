@@ -4,33 +4,49 @@ services:
     env: node
     plan: standard
     buildCommand: npm install && npm run build
-    startCommand: node dist/server.js
-    disk:
-      name: alphamark-data
-      mountPath: /data
-      sizeGB: 1
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: ENCRYPTION_SECRET
-        generateValue: true
-      - key: EXECUTION_PRIVATE_KEY
-        generateValue: true
-      - key: GITHUB_REPO_URL
-        generateValue: true
-      - key: ALCHEMY_ETH_KEY
-        sync: true
-      - key: INFURA_ETH_KEY
-        sync: true
-      - key: PIMLICO_API_KEY
-        sync: true
-      - key: PIMLICO_BUNDLER_URL
-        sync: true
-      - key: ETH_RPC_URL
-        sync: true
-      - key: POLYGON_RPC_URL
-        sync: true
-      - key: BSC_RPC_URL
-        sync: true
-      - key: ARBITRUM_RPC_URL
-        sync: true
+     startCommand: npm start
+     disk:
+       name: alphamark-data
+       mountPath: /data
+       sizeGB: 1
+     envVars:
+       - key: NODE_ENV
+         value: production
+       - key: PORT
+         value: 10000
+       - key: ENCRYPTION_SECRET
+         generateValue: true
+       - key: EXECUTION_PRIVATE_KEY
+         generateValue: true
+       - key: GITHUB_REPO_URL
+         generateValue: true
+       - key: ALCHEMY_ETH_KEY
+         sync: true
+       - key: INFURA_ETH_KEY
+         sync: true
+       - key: PIMLICO_API_KEY
+         sync: true
+       - key: PIMLICO_BUNDLER_URL
+         sync: true
+       - key: PIMLICO_PAYMASTER_URL
+         sync: true
+       - key: GEMINI_API_KEY
+         sync: true
+       - key: OPENAI_API_KEY
+         sync: true
+       - key: ETH_RPC_URL
+         sync: true
+       - key: POLYGON_RPC_URL
+         sync: true
+       - key: BSC_RPC_URL
+         sync: true
+       - key: ARBITRUM_RPC_URL
+         sync: true
+       - key: OPTIMISM_RPC_URL
+         sync: true
+       - key: BASE_RPC_URL
+         sync: true
+       - key: AVALANCHE_RPC_URL
+         sync: true
+       - key: SOLANA_RPC_URL
+         sync: true
