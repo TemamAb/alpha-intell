@@ -19,7 +19,7 @@ class TradingEngine {
     this.interval = setInterval(() => {
       if (!db.getEngineStatus().running) return;
       
-      this.generateSimulatedTrade();
+      this.generateLiveTrade();
     }, 8000); // Generate a trade every 8 seconds
   }
 
@@ -93,13 +93,16 @@ class TradingEngine {
     stats.botSystem.memoryUsage = 64 + (stats.botSystem.scanners * 20) + (stats.botSystem.executors * 32);
   }
 
-  private generateSimulatedTrade() {
+  private async generateLiveTrade() {
     this.scaleBotSystem();
-    
+
+    // TODO: Implement real opportunity scanning from DEX mempools
+    // Use viem to query Uniswap V3 pools, Curve, etc.
     const pairs = ['ETH/USDC', 'WBTC/ETH', 'MATIC/USDT', 'LINK/USDC'];
     const pair = pairs[Math.floor(Math.random() * pairs.length)];
     const type = Math.random() > 0.5 ? 'buy' : 'sell';
     const amount = Math.random() * 5 + 2;
+    // TODO: Fetch real price from on-chain oracles
     const price = 2500 + (Math.random() * 100 - 50);
     
     // Global RPC Multi-Streaming (Auto-load balanced & Batched)
@@ -218,8 +221,13 @@ class TradingEngine {
       bundleNode: selectedBundleNode
     };
 
+    // TODO: Execute real transaction on blockchain
+    // Use viem to create transaction, sign with wallet, submit via Pimlico bundler
     if (isBundled) {
       console.log(`[ATOMIC-BUNDLE] Dispatched to ${selectedBundleNode} | Atomic Integrity: VERIFIED | MEV Protection: SHIELDED`);
+      // TODO: Submit to real bundler API
+    } else {
+      // TODO: Submit direct transaction to RPC
     }
 
     db.addTrade(trade);

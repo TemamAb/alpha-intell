@@ -114,6 +114,47 @@ export default function LiveReadiness({ strategies, onNavigate }: LiveReadinessP
       tooltip: "Ensures 24/7 execution uptime by running the bot on persistent server environments."
     },
     {
+    },
+    {
+      id: 'blockchain',
+      title: "Blockchain Integration",
+      description: "Implement viem/ethers library for real blockchain calls and transaction broadcasting.",
+      status: "pending",
+      icon: Globe,
+      fixInstruction: "1. Install viem or ethers library. 2. Configure RPC providers for mainnet. 3. Implement transaction signing and broadcasting.",
+      actionLabel: "Implement Blockchain",
+      tooltip: "Required for real on-chain execution instead of simulation."
+    },
+    {
+      id: 'wallet',
+      title: "Secure Wallet Management",
+      description: "Add encrypted private key storage and secure wallet operations for live transactions.",
+      status: "pending",
+      icon: Key,
+      fixInstruction: "1. Implement encrypted key storage. 2. Add wallet connection for ERC-4337 smart accounts. 3. Enable secure transaction signing.",
+      actionLabel: "Configure Wallet",
+      tooltip: "Secure management of execution keys for real fund access."
+    },
+    {
+      id: 'bundler',
+      title: "Pimlico Bundler Integration",
+      description: "Connect to Pimlico ERC-4337 bundler for atomic transaction execution.",
+      status: "pending",
+      icon: Zap,
+      fixInstruction: "1. Configure Pimlico bundler API. 2. Implement bundle submission. 3. Add MEV protection features.",
+      actionLabel: "Setup Bundler",
+      tooltip: "Atomic execution engine for complex multi-step transactions."
+    },
+    {
+      id: 'balance',
+      title: "On-Chain Balance Monitoring",
+      description: "Real-time balance verification and wallet state monitoring from blockchain.",
+      status: "pending",
+      icon: Wallet,
+      fixInstruction: "1. Implement balance queries via RPC. 2. Add real-time wallet monitoring. 3. Sync with on-chain state.",
+      actionLabel: "Monitor Balances",
+      tooltip: "Accurate balance tracking from blockchain instead of simulation."
+    },
       id: 'safety',
       title: "Emergency Circuit Breakers",
       description: "Verify that the Emergency Stop kills all active listeners.",
@@ -226,7 +267,7 @@ export default function LiveReadiness({ strategies, onNavigate }: LiveReadinessP
       const res = await fetch('/api/control/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'live' })
+        body: JSON.stringify({})
       });
       const data = await res.json();
       if (data.success) {
@@ -474,7 +515,7 @@ export default function LiveReadiness({ strategies, onNavigate }: LiveReadinessP
           </div>
         </div>
         
-        <Tooltip content={allCompleted ? "Final confirmation to deploy AlphaMark to cloud infrastructure and begin live trading." : "Complete all checklist items to unlock live trading mode."}>
+        <Tooltip content={allCompleted ? "Final confirmation to deploy AlphaMark to cloud infrastructure." : "Complete all checklist items to enable deployment."}>
           <button 
             disabled={!allCompleted || isLive}
             onClick={handleGoLive}
@@ -493,7 +534,7 @@ export default function LiveReadiness({ strategies, onNavigate }: LiveReadinessP
             ) : (
               <>
                 <Zap className="w-4 h-4" />
-                {allCompleted ? 'Confirm & Go Live' : 'Start Live Trading Mode'}
+                {allCompleted ? 'Confirm & Deploy' : 'Complete Readiness First'}
               </>
             )}
           </button>
