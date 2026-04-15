@@ -1,0 +1,101 @@
+{
+  "readiness": [
+    {
+      "id": "aa",
+      "status": "completed"
+    },
+    {
+      "id": "paymaster",
+      "status": "completed"
+    },
+    {
+      "id": "rpc",
+      "status": "completed"
+    },
+    {
+      "id": "key",
+      "status": "completed"
+    },
+    {
+      "id": "strategy",
+      "status": "completed"
+    },
+    {
+      "id": "blockchain",
+      "status": "completed"
+    },
+    {
+      "id": "wallet",
+      "status": "completed"
+    },
+    {
+      "id": "bundler",
+      "status": "completed"
+    },
+    {
+      "id": "balance",
+      "status": "completed"
+    },
+    {
+      "id": "safety",
+      "status": "completed"
+    }
+  ],
+  "wallets": [],
+  "strategies": [
+    {
+      "id": "s1",
+      "name": "Neural Forger: L1 Alpha Shadow",
+      "type": "forging",
+      "status": "active",
+      "config": {
+        "minProfitThreshold": 0.04,
+        "maxBribePercent": 70,
+        "shadowTarget": "0xMEV_Elite_1"
+      }
+    },
+    {
+      "id": "s2",
+      "name": "Cross-Chain Forging: Polygon/BSC",
+      "type": "forging",
+      "status": "active",
+      "config": {
+        "minProfitThreshold": 0.02,
+        "maxBribePercent": 70,
+        "shadowTarget": "0xMEV_Elite_2"
+      }
+    }
+  ],
+  "stats": {
+    "totalProfit": 0,
+    "winRate": 0,
+    "activeOpps": 0,
+    "profitPerTrade": 0,
+    "tradesPerHour": 0,
+    "totalTrades": 0,
+    "learningProgress": 0,
+    "shadowedWallets": 0,
+    "avgLatency": 0,
+    "botSystem": {
+      "scanners": 0,
+      "orchestrators": 0,
+      "executors": 0,
+      "cpuUsage": 0,
+      "memoryUsage": 0
+    },
+    "chartData": [
+      {
+        "time": "01:22 AM",
+        "profit": 0
+      }
+    ]
+  },
+  "engineStatus": {
+    "running": false,
+    "mode": "live",
+    "gasless": true,
+    "bribeStrategy": "dynamic",
+    "flashLoanEnabled": true
+  },
+  "trades": []
+}

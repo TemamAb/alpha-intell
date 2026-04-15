@@ -6,7 +6,7 @@ import { db } from './db';
 import crypto from 'crypto';
 import { engine } from './engine';
 import { privateKeyToAccount } from 'viem/accounts';
-import { signerToSimpleSmartAccount } from "permissionless/accounts";
+// import { signerToSimpleSmartAccount } from "permissionless/accounts/simple"; // Not used directly
 
 const router = Router();
 

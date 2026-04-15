@@ -4,7 +4,7 @@ import { createPublicClient, createClient, http, fallback, Hash, PublicClient, p
 import { mainnet } from 'viem/chains';
 import { pimlicoActions } from "permissionless/actions/pimlico";
 import { privateKeyToAccount } from 'viem/accounts';
-import { signerToSimpleSmartAccount } from "permissionless/accounts";
+import { toSimpleSmartAccount } from "permissionless/accounts";
 import { createSmartAccountClient, SmartAccountClient } from "permissionless";
 
 export interface BlockchainEvent {
@@ -172,7 +172,7 @@ class TradingEngine {
       if (!decryptedKey) throw new Error("Could not retrieve execution key.");
 
       const owner = privateKeyToAccount(decryptedKey as `0x${string}`);
-      const simpleAccount = await signerToSimpleSmartAccount(this.publicClient, {
+      const simpleAccount = await toSimpleSmartAccount(this.publicClient, {
         signer: owner,
         factoryAddress: "0x9406Cc6185a346906296840746125a0E44976454", // Standard SimpleAccount Factory
         entryPoint: "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
