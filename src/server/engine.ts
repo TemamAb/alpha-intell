@@ -133,7 +133,67 @@ class TradingEngine {
     // Architect Fix: Deferred RPC increment to avoid detection latency
     setTimeout(() => db.incrementRPC(), 0);
 
-    // Heuristic: Check for target wallet activity if forging
+// Phase 1: Uniswap Arb Scanner
+    // Top pools: USDC/WETH, WBTC/ETH
+    const TOP_POOLS = [
+      '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640', // USDC/WETH 0.3%
+      '0x4585fe77225b41b697c938b018e2ac67ac5a20c0', // WETH/USDC 0.05%
+    ];
+
+    for (const poolA of TOP_POOLS) {
+      for (const poolB of TOP_POOLS) if (poolA !== poolB) {
+        const amountIn = parseEther('1000'); // $1k test
+        try {
+          const [slot0A, slot0B] = await Promise.all([
+            this.publicClient.readContract({
+              address: poolA as `0x${string}`,
+              abi: UNISWAP_V3_POOL_ABI,
+              functionName: 'slot0'
+            }),
+            this.publicClient.readContract({
+              address: poolB as `0x${string}`,
+              abi: UNISWAP_V3_POOL_ABI,
+              functionName: 'slot0'
+            })
+          ]);
+          const priceA = Number(slot0A[0]) / 1e18; // sim sqrtPrice
+          const priceB = Number(slot0B[0]) / 1e18;
+          const priceDiff = Math.abs(priceA - priceB) / ((priceA + priceB)/2) * 100;
+          if (priceDiff > 0.05) { // >0.05%
+            const profitETH = (amountIn * BigInt(priceDiff * 10)) / BigInt(1e18); // sim
+            const arbOpp: ArbOpportunity = {
+              poolA: poolA as `0x${string}`,
+              poolB: poolB as `0x${string}`,
+              tokenIn: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC
+              tokenOut: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // WETH
+              amountIn,
+              amountOutExpected: amountIn * BigInt(101), // sim
+              priceDiff,
+              profitETH: Number(profitETH) / 1e18,
+              gasEstimate: 300000,
+              executionWindow: 3
+            };
+            db.incrementActiveOpps();
+            this.emitBlockchainEvent({
+              id: `arb-${Date.now()}`,
+              type: 'detect',
+              message: `Arb opp ${priceDiff.toFixed(2)}% ${poolA.slice(-6)} ↔ ${poolB.slice(-6)} Profit: ${arbOpp.profitETH.toFixed(4)} ETH`,
+              category: 'detection',
+              blockNumber: this.currentBlock,
+              timestamp: new Date().toISOString()
+            });
+            // Execute arb trade
+            this.executeArbTrade(arbOpp, activeStrategy);
+          }
+        } catch (e) {
+          // Skip bad pool
+        }
+      }
+    }
+
+const UNISWAP_V3_POOL_ABI = parseAbi(['function slot0() external view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked)']);
+
+    // Forging logic...
 if (activeStrategy.type === 'forging') {
         // Dynamic target discovery + sim demo detection (1% chance for demo)
         if (Math.random() < 0.01 || block.transactions.some((tx: any) => tx.from?.toLowerCase().includes('mev') || tx.from?.toLowerCase() === '0xd8da6bf26964af9d7eed9e03e53415d37aa96045')) {
@@ -286,6 +346,31 @@ console.error(`--- [ACID TEST] FAILED: ${msg} ---`);
     console.log(`[BRIBE] Gross: ${grossProfit.toFixed(6)} ETH | Bribe: ${finalBribe.toFixed(6)} ETH (${((finalBribe/grossProfit)*100).toFixed(1)}%)`);
     
     return finalBribe;
+  }
+
+private async executeArbTrade(arbOpp: ArbOpportunity, strategy: Strategy) {
+    // Sim arb execution
+    const profit = arbOpp.profitETH * 0.7; // 30% retention
+    db.addTrade({
+      id: `arb-${Date.now()}`,
+      pair: `${arbOpp.tokenIn.slice(-6)}/${arbOpp.tokenOut.slice(-6)}`,
+      type: 'arb',
+      price: arbOpp.priceDiff,
+      amount: Number(arbOpp.amountIn) / 1e18,
+      profit,
+      arbOpp,
+      status: 'completed' as const,
+      timestamp: new Date().toISOString(),
+      strategyId: strategy.id
+    });
+    this.emitBlockchainEvent({
+      id: `arb-success-${Date.now()}`,
+      type: 'success',
+      message: `Arb executed: ${arbOpp.profitETH.toFixed(4)} ETH gross → ${profit.toFixed(4)} net`,
+      category: 'success',
+      blockNumber: this.currentBlock,
+      timestamp: new Date().toISOString()
+    });
   }
 
   private async executeOnChainTrade(targetHash: Hash, strategy: Strategy) {

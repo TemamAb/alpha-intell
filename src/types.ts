@@ -87,16 +87,30 @@ export interface Strategy {
   };
 }
 
+export interface ArbOpportunity {
+  poolA: `0x${string}`;
+  poolB: `0x${string}`;
+  tokenIn: `0x${string}`;
+  tokenOut: `0x${string}`;
+  amountIn: bigint;
+  amountOutExpected: bigint;
+  priceDiff: number; // %
+  profitETH: number;
+  gasEstimate: number;
+  executionWindow: number; // blocks
+}
+
 export interface Trade {
   id: string;
   timestamp: string;
   pair: string;
-  type: 'buy' | 'sell';
+  type: 'buy' | 'sell' | 'arb';
   price: number;
   amount: number;
   profit: number;
   bribePaid?: number;
   flashLoanUsed?: boolean;
+  arbOpp?: ArbOpportunity;
   status: 'completed' | 'pending' | 'failed' | 'reverted';
   isBundled?: boolean;
   bundleNode?: 'Flashbots' | 'Pimlico' | 'Builder0x69' | 'Beaver';
