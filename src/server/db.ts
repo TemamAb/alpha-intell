@@ -380,7 +380,7 @@ class Database {
   getVerifiedReadiness(): ReadinessStep[] {
     const isProd = process.env.NODE_ENV === 'production';
     const hasPimlico = !!process.env.PIMLICO_API_KEY && !!process.env.PIMLICO_BUNDLER_URL;
-    const hasRPC = !!process.env.ALCHEMY_ETH_KEY || !!process.env.INFURA_ETH_KEY || !!process.env.RPC_ENDPOINT_URL;
+  const hasRPC = !!process.env.ALCHEMY_ETH_KEY || !!process.env.INFURA_ETH_KEY || !!process.env.RPC_ENDPOINT_URL || !!process.env.ETH_RPC_URL || !!process.env.POLYGON_RPC_URL || !!process.env.BSC_RPC_URL || !!process.env.ARBITRUM_RPC_URL || !!process.env.OPTIMISM_RPC_URL || !!process.env.BASE_RPC_URL || !!process.env.AVALANCHE_RPC_URL;
     const hasSecret = !!process.env.ENCRYPTION_SECRET && process.env.ENCRYPTION_SECRET.length >= 32;
     const hasGitHub = !!process.env.GITHUB_REPO_URL || !!process.env.RENDER_GIT_REPO_URL;
 

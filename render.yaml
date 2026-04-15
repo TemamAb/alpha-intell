@@ -26,3 +26,11 @@ services:
         sync: true
       - key: PIMLICO_BUNDLER_URL
         sync: true
+      - key: ETH_RPC_URL
+        sync: true
+      - key: POLYGON_RPC_URL
+        sync: true
+      - key: BSC_RPC_URL
+        sync: true
+      - key: ARBITRUM_RPC_URL
+        sync: true

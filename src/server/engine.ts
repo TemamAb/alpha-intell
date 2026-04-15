@@ -37,6 +37,14 @@ class TradingEngine {
       transports.push(http(`https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_ETH_KEY}`));
     if (process.env.INFURA_ETH_KEY)
       transports.push(http(`https://mainnet.infura.io/v3/${process.env.INFURA_ETH_KEY}`));
+    if (process.env.ETH_RPC_URL)
+      transports.push(http(process.env.ETH_RPC_URL));
+    if (process.env.POLYGON_RPC_URL)
+      transports.push(http(process.env.POLYGON_RPC_URL));
+    if (process.env.BSC_RPC_URL)
+      transports.push(http(process.env.BSC_RPC_URL));
+    if (process.env.ARBITRUM_RPC_URL)
+      transports.push(http(process.env.ARBITRUM_RPC_URL));
     
     // Restoration Fix: Include public fallback with lower rank to ensure 100% uptime 
     // while prioritizing private free-tier keys for execution speed.
