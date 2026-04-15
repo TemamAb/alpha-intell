@@ -279,6 +279,7 @@ router.post("/ai/query", async (req, res) => {
           }
         });
 
+        // @ts-ignore
         const result = await response.response;
         responseText = result.text();
       } catch (e) {

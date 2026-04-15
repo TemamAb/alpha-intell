@@ -57,7 +57,7 @@ export interface LatencyData {
 
 export interface EngineStatus {
   running: boolean;
-  mode: 'live';
+  mode: 'paper' | 'live';
   gasless: boolean;
   bribeStrategy: 'conservative' | 'aggressive' | 'dynamic';
   flashLoanEnabled: boolean;
@@ -83,6 +83,7 @@ export interface Strategy {
     shadowTarget?: string; // For Forging strategy
     contractAddress?: string;
     callData?: string;
+    tradeAmount?: number;
   };
 }
 
@@ -94,11 +95,13 @@ export interface Trade {
   price: number;
   amount: number;
   profit: number;
-  bribePaid: number;
-  flashLoanUsed: boolean;
+  bribePaid?: number;
+  flashLoanUsed?: boolean;
   status: 'completed' | 'pending' | 'failed' | 'reverted';
-  isBundled: boolean;
+  isBundled?: boolean;
   bundleNode?: 'Flashbots' | 'Pimlico' | 'Builder0x69' | 'Beaver';
+  strategyId?: string;
+  hash?: string;
 }
 
 export interface ReadinessStep {

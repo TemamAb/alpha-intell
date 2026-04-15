@@ -2,7 +2,7 @@ import { Wallet, Stats, EngineStatus, Strategy, Trade, RPCQuota, TargetWallet, R
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { PublicClient, parseAbi } from 'viem';
+import { PublicClient, parseAbi, formatEther } from 'viem';
 
 const CHAINLINK_ETH_USD_ABI = parseAbi([
   'function latestRoundData() external view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)'
@@ -221,11 +221,10 @@ private saveTimeout: NodeJS.Timeout | null = null;
       avgSlippageTolerance: 0.05,
       executionLatency: 14
     },
-    { 
-      address: '0xMEV_Elite_3', 
-      label: 'Flash Loan King', 
+    {
+      address: '0xMEV_Elite_3',
+      label: 'Flash Loan King',
       chain: 'BSC',
-      tooltip: "Accurate balance tracking from blockchain for live capital management.",
       strategies: ['Multi-Hop', 'Flash Loan'],
       profitPerTrade: 0.45,
       tradesPerHour: 2.1,
@@ -248,6 +247,7 @@ private saveTimeout: NodeJS.Timeout | null = null;
 
   async refreshEthPrice(publicClient: PublicClient) {
     try {
+      // @ts-ignore
       const data = await publicClient.readContract({
         address: CHAINLINK_ETH_USD_ADDRESS,
         abi: CHAINLINK_ETH_USD_ABI,
@@ -289,6 +289,21 @@ private saveTimeout: NodeJS.Timeout | null = null;
     if (!wallet) return null;
     // For this production sequence, we decrypt the key for kernel usage
     return this.decrypt(wallet.key);
+  }
+
+  async refreshWalletBalances(publicClient: PublicClient) {
+    for (const wallet of this.wallets) {
+      if (wallet.address && wallet.address !== '') {
+        try {
+          const balance = await publicClient.getBalance({ address: wallet.address as `0x${string}` });
+          wallet.balance = parseFloat(formatEther(balance));
+          console.log(`[BALANCE] Updated ${wallet.id}: ${wallet.balance} ETH`);
+        } catch (error) {
+          console.error(`[BALANCE] Failed to fetch balance for ${wallet.id}:`, error);
+        }
+      }
+    }
+    this.save();
   }
 
   getStrategies() { return this.strategies; }

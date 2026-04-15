@@ -219,8 +219,7 @@ const completeStep = (id: string) => {
         setSteps(prev => prev.map(s => s.id === id ? { ...s, status: newStatus, discoveredValue: inputValue.slice(0, 20) + '...' } : s));
         setFixingId(null);
         setInputValue('');
-        // Re-fetch wallets if key
-        if (id === 'key') fetch('/api/wallets').then(res => res.json()).then(setWallets);
+
       } else {
         alert('Config failed: ' + data.error);
       }
