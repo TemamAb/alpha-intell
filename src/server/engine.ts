@@ -2,7 +2,7 @@ import { db } from './db';
 import { Trade, Strategy, EngineStatus, Wallet } from '../types';
 import { createPublicClient, createClient, http, fallback, Hash, PublicClient, parseEther, formatEther, encodeFunctionData } from 'viem';
 import { mainnet } from 'viem/chains';
-import { pimlicoBundlerActions, pimlicoPaymasterActions } from "permissionless/actions/pimlico";
+import { pimlicoBundlerActions, pimlicoPaymasterActions } from "permissionless/actions";
 import { privateKeyToAccount } from 'viem/accounts';
 import { signerToSimpleSmartAccount } from "permissionless/accounts";
 import { createSmartAccountClient, SmartAccountClient } from "permissionless";
@@ -186,7 +186,7 @@ class TradingEngine {
       this.smartAccountClient = createSmartAccountClient({
         account: simpleAccount,
         chain: mainnet,
-        transport: http(cloudBundlerUrl),
+        bundlerTransport: http(cloudBundlerUrl),
         sponsorUserOperation: async (args) => {
             const paymasterClient = createClient({
               chain: mainnet,
@@ -194,7 +194,7 @@ class TradingEngine {
             }).extend(pimlicoPaymasterActions({ entryPoint: "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789" }));
             return paymasterClient.sponsorUserOperation(args);
         },
-      });
+      }).extend(pimlicoBundlerActions());
       
       // Architect Fix: Safely sync the smart account address to the provisioned wallet
       const activeWallet = wallets.find(w => w.id === 'auto-provisioned');
