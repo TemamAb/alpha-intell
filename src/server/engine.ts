@@ -9,6 +9,7 @@ import { createSmartAccountClient, SmartAccountClient } from "permissionless";
 
 const UNISWAP_V3_POOL_ABI = parseAbi(['function slot0() external view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked)']);
 
+
 export interface BlockchainEvent {
   id: string;
   type: 'scan' | 'detect' | 'orchestrate' | 'execute' | 'success' | 'protection';
@@ -61,11 +62,14 @@ class TradingEngine {
     });
   }
 
-  async start() {
-    if (this.interval) return;
+
+    if (this.interval) {
+      console.log('[ENGINE] Already running');
+      return;
+    }
     
     const status = db.getEngineStatus();
-    console.log(`Engine started in ${status.mode} mode`);
+    console.log(`[ENGINE] Mode: ${status.mode}`);
 
     if (status.mode === 'live') {
       // --- AUTOPILOT INITIALIZATION ---
@@ -80,8 +84,13 @@ class TradingEngine {
         }
       }
 
+      console.log('[ENGINE] Running ACID TEST...');
       const success = await this.performAcidTest();
-      if (!success) return;
+      if (!success) {
+        console.error('[ENGINE] ACID TEST FAILED - No block watcher started');
+        return;
+      }
+      console.log('[ENGINE] ACID TEST PASSED ✅');
       db.resetStats();
       
       // Initialize Price Oracle
@@ -252,13 +261,16 @@ if (activeStrategy.type === 'forging') {
   }
 
   private async performAcidTest() {
-    console.log('--- [ACID TEST] LIVE MODE VALIDATION ---');
+    console.log('🔬 [ACID TEST] Starting full validation...');
     
     try {
+      console.log('[ACID] RPC test...');
       // 1. Infrastructure Validation
       const chainId = await this.publicClient.getChainId();
+      console.log(`[ACID] Chain ID: ${chainId}`);
       const blockNumber = await this.publicClient.getBlockNumber();
-      this.currentBlock = Number(blockNumber); // Ensure currentBlock is set
+      console.log(`[ACID] Latest block: ${blockNumber}`);
+      this.currentBlock = Number(blockNumber);
 
       const readiness = db.getVerifiedReadiness();
       const criticalSteps = ['rpc', 'blockchain', 'wallet'];
@@ -277,6 +289,7 @@ if (activeStrategy.type === 'forging') {
       }
       
       const decryptedKey = db.getDecryptedKey(wallets[0].id);
+      console.log(`[ACID] Wallet count: ${wallets.length}, Decrypted key: ${decryptedKey ? decryptedKey.slice(0,10)+'...' : 'MISSING'}`);
       if (!decryptedKey) {
         throw new Error("Could not retrieve or decrypt execution key. Ensure ENCRYPTION_SECRET is set and key is valid.");
       }
@@ -290,8 +303,10 @@ if (activeStrategy.type === 'forging') {
       });
 
       const cloudBundlerUrl = process.env.PIMLICO_BUNDLER_URL;
+      console.log(`[ACID] Pimlico Bundler: ${cloudBundlerUrl ? 'OK' : 'MISSING'}`);
       if (!cloudBundlerUrl) throw new Error("PIMLICO_BUNDLER_URL missing.");
       const paymasterUrl = process.env.PIMLICO_PAYMASTER_URL || cloudBundlerUrl;
+      console.log(`[ACID] Paymaster: ${paymasterUrl}`);
 
       // @ts-ignore
       try {

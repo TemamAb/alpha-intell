@@ -1,7 +1,11 @@
-# Trading Fix & Sidebar Update TODO
+# AlphaMarkPro Trading Fix - Progress Tracker
 
-1. [x] Update data/db.json: set engineStatus.running=true, fix wallet address to valid, balance=1.5 ETH sim.
-2. [x] Edit src/server/engine.ts: Add detailed logging in performAcidTest, tolerate balance=0, better error for key/rpc.
-3. [x] Add Blockchain Stream to Sidebar.tsx
-4. [x] Test locally with npm run dev
-5. [x] git commit & push
+## [✅] Step 1: Add Diagnostics/Logging (engine.ts, api.ts)
+## [ ] Step 2: Fix Demo Config (db.json)
+## [3 ] Step 3: Improve Triggers (engine.ts)
+## [ ] Step 4: Render Deploy Config (render.yaml)
+## [ ] Step 5: Test Local (npm run dev → /diagnostics)
+## [ ] Step 6: Deploy Render + Verify Logs
+## [ ] Step 7: Monitor /trades/stream
+
+**Status**: Plan Ready - Proceed with Step 1?

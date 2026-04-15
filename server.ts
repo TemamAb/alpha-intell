@@ -19,8 +19,8 @@ async function startServer() {
   app.use("/api", apiRouter);
 
   // Initialize engine if it should be running
-  if (db.getEngineStatus().running) {
-    engine.start();
+if (db.getEngineStatus().running) {
+    engine.start().catch(console.error);
   }
 
   // Vite middleware for development

@@ -95,46 +95,6 @@ export default function LiveReadiness({ strategies, onNavigate }: LiveReadinessP
       tooltip: "The core alpha source. Requires synchronization with top-performing on-chain wallets."
     },
     {
-      id: 'blockchain',
-      title: "Blockchain Integration",
-      description: "Implement viem/ethers library for real blockchain calls and transaction broadcasting.",
-      status: "pending",
-      icon: Globe,
-      fixInstruction: "1. Install viem or ethers library. 2. Configure RPC providers for mainnet. 3. Implement transaction signing and broadcasting.",
-      actionLabel: "Implement Blockchain",
-      tooltip: "Required for real on-chain execution instead of simulation."
-    },
-    {
-      id: 'wallet',
-      title: "Secure Wallet Management",
-      description: "Add encrypted private key storage and secure wallet operations for live transactions.",
-      status: "pending",
-      icon: Key,
-      fixInstruction: "1. Implement encrypted key storage. 2. Add wallet connection for ERC-4337 smart accounts. 3. Enable secure transaction signing.",
-      actionLabel: "Configure Wallet",
-      tooltip: "Secure management of execution keys for real fund access."
-    },
-    {
-      id: 'bundler',
-      title: "Pimlico Bundler Integration",
-      description: "Connect to Pimlico ERC-4337 bundler for atomic transaction execution.",
-      status: "pending",
-      icon: Zap,
-      fixInstruction: "1. Configure Pimlico bundler API. 2. Implement bundle submission. 3. Add MEV protection features.",
-      actionLabel: "Setup Bundler",
-      tooltip: "Atomic execution engine for complex multi-step transactions."
-    },
-    {
-      id: 'balance',
-      title: "On-Chain Balance Monitoring",
-      description: "Real-time balance verification and wallet state monitoring from blockchain.",
-      status: "pending",
-      icon: Wallet,
-      fixInstruction: "1. Implement balance queries via RPC. 2. Add real-time wallet monitoring. 3. Sync with on-chain state.",
-      actionLabel: "Monitor Balances",
-      tooltip: "Accurate balance tracking from blockchain instead of simulation."
-    },
-    {
       id: 'safety',
       title: "Emergency Circuit Breakers",
       description: "Verify that the Emergency Stop kills all active listeners.",
@@ -187,10 +147,7 @@ export default function LiveReadiness({ strategies, onNavigate }: LiveReadinessP
   const [isLive, setIsLive] = useState(false);
   const [deploymentError, setDeploymentError] = useState<string | null>(null);
 
-  const validateGithubUrl = (url: string) => {
-    const githubRegex = /^https:\/\/github\.com\/[\w-]+\/[\w.-]+$/;
-    return githubRegex.test(url);
-  };
+
 
   const allCompleted = useMemo(() => steps.every(s => s.status === 'completed'), [steps]);
 

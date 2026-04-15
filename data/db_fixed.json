@@ -44,10 +44,10 @@
   "wallets": [
     {
       "id": "manual-provisioned",
-      "address": "",
-      "key": "test:encrypted:key:here",
+      "address": "0xAaA... (AA)",
+      "key": "ENCRYPTED_REAL_PRIVATE_KEY",
       "chain": "Ethereum",
-      "balance": 1.5,
+      "balance": 0,
       "isAA": true,
       "paymasterStatus": "active"
     }
@@ -55,28 +55,30 @@
   "strategies": [
     {
       "id": "s1",
-      "name": "Neural Forger: L1 Alpha Shadow",
+      "name": "AlphaMarkPro Neural Forger",
       "type": "forging",
       "status": "active",
       "config": {
         "minProfitThreshold": 0.04,
         "maxBribePercent": 70,
-        "shadowTarget": "",
+        "shadowTarget": "0xae2Fc483527B8EF03308B936144b47B50b65a430",
         "contractAddress": "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD",
-        "callData": "0x"
+        "callData": "0x095ea7b3",
+        "tradeAmount": 0.1
       }
     },
     {
       "id": "s2",
-      "name": "Cross-Chain Forging: Polygon/BSC",
+      "name": "AlphaMarkPro Cross-Chain",
       "type": "forging",
-      "status": "active",
+      "status": "paused",
       "config": {
         "minProfitThreshold": 0.02,
         "maxBribePercent": 70,
         "shadowTarget": "",
         "contractAddress": "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD",
-        "callData": "0x"
+        "callData": "0x095ea7b3",
+        "tradeAmount": 0.1
       }
     }
   ],

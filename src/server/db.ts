@@ -10,7 +10,7 @@ const CHAINLINK_ETH_USD_ABI = parseAbi([
 const CHAINLINK_ETH_USD_ADDRESS = '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419';
 
 // Architect Fix: Ensure path aligns with Render Persistent Disk mount point (/data)
-const DB_PATH = process.env.NODE_ENV === 'production' ? '/data/db.json' : path.join(process.cwd(), 'data', 'db.json');
+const DB_PATH = process.env.NODE_ENV === 'production' ? '/data/db.json' : path.join(process.cwd(), 'data', 'db_fixed.json');
 
 class Database {
   private readiness: ReadinessStep[] = [    { id: 'aa', status: 'pending' },
