@@ -90,7 +90,7 @@ router.get("/forging/targets", (req, res) => {
   res.json(db.getTargetWallets());
 });
 
-y files canrouter.get("/ping", (req, res) => {
+router.get("/ping", (req, res) => {
   // Institutional Fix: Return a base latency of 1ms if engine is running 
   // to prevent dashboard from showing 'OFFLINE' or '0ms'
   const latency = db.getEngineStatus().running ? (db.getStats().avgLatency || 1) : 0;
