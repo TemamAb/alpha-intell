@@ -1,10 +1,3 @@
-# AlphaMark Live Fix TODO
+# Trading Fix & Sidebar Update TODO
 
-- [x] Diagnose readiness gate (wallets empty)
-- [x] Commit render.yaml/data
-- [ ] Edit src/components/LiveReadiness.tsx (validate key input)
-- [ ] Edit src/server/api.ts (enforce key value)
-- [ ] Add test wallet to data/db.json
-- [ ] Test GO LIVE
-- [ ] Commit/push
-- [ ] Deploy Render
+1. [x] Update data/db.json: set engineStatus.running=true, fix wallet address to valid, balance=1.5 ETH sim.\n2. [x] Edit src/server/engine.ts: Add detailed logging in performAcidTest, tolerate balance=0, better error for key/rpc.\n3. [x] Add Blockchain Stream to Sidebar.tsx\n4. [ ] Test locally with npm run dev\n5. [ ] git commit & push

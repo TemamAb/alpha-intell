@@ -16,7 +16,8 @@ export default function Sidebar({ activePage, setActivePage, onStart, onStop, is
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'strategies', label: 'Strategies', icon: Zap },
     { id: 'wallet', label: 'Wallet', icon: Wallet },
-    { id: 'streams', label: 'Live Trades', icon: Activity },
+{ id: 'streams', label: 'Live Trades', icon: Activity },
+    { id: 'blockchain-streaming', label: 'Blockchain Stream', icon: Activity },
     { id: 'copilot', label: 'AI Copilot', icon: Bot },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
