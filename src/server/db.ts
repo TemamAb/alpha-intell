@@ -420,7 +420,7 @@ private saveTimeout: NodeJS.Timeout | null = null;
         case 'key':
         case 'wallet':
         case 'balance':
-          if ((hasSecret && this.wallets.length > 0) || step.discoveredValue) {
+          if (step.status === 'completed' || step.discoveredValue || (hasSecret && this.wallets.length > 0)) {
             status = 'completed';
             discoveredValue = step.discoveredValue || (this.wallets[0]?.key?.slice(0,10) + '...');
           }
