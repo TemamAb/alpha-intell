@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import OpenAI from 'openai';
-import { createPublicClient, http, formatEther } from 'viem';
+import { createPublicClient, http, fallback } from 'viem';
 import { mainnet } from 'viem/chains';
 import { db } from './db';
 import crypto from 'crypto';
@@ -56,7 +56,7 @@ router.post("/readiness/update", async (req, res) => {
   if (value && id === 'key') {
     db.addWallet({
       id: 'manual-provisioned',
-      address: '', 
+      address: '',
       key: db.encrypt(value),
       chain: 'Ethereum',
       balance: 0,
@@ -72,6 +72,37 @@ router.post("/readiness/update", async (req, res) => {
     const wallets = db.getWallets();
     if (wallets.length === 0) {
       return res.status(400).json({ success: false, error: "Configure key first." });
+    }
+  }
+
+  if (id === 'balance' && status === 'completed') {
+    // Refresh wallet balances on-chain
+    const transports = [];
+    if (process.env.ALCHEMY_ETH_KEY) transports.push(http(`https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_ETH_KEY}`));
+    if (process.env.INFURA_ETH_KEY) transports.push(http(`https://mainnet.infura.io/v3/${process.env.INFURA_ETH_KEY}`));
+    if (process.env.ETH_RPC_URL) transports.push(http(process.env.ETH_RPC_URL));
+    if (process.env.POLYGON_RPC_URL) transports.push(http(process.env.POLYGON_RPC_URL));
+    if (process.env.BSC_RPC_URL) transports.push(http(process.env.BSC_RPC_URL));
+    if (process.env.ARBITRUM_RPC_URL) transports.push(http(process.env.ARBITRUM_RPC_URL));
+    if (process.env.OPTIMISM_RPC_URL) transports.push(http(process.env.OPTIMISM_RPC_URL));
+    if (process.env.BASE_RPC_URL) transports.push(http(process.env.BASE_RPC_URL));
+    if (process.env.AVALANCHE_RPC_URL) transports.push(http(process.env.AVALANCHE_RPC_URL));
+    transports.push(http('https://rpc.ankr.com/eth'));
+    transports.push(http('https://ethereum.publicnode.com'));
+    transports.push(http('https://1rpc.io/eth'));
+
+    if (transports.length > 0) {
+      try {
+        // @ts-ignore
+        const publicClient = createPublicClient({
+          chain: mainnet,
+          transport: fallback(transports, { rank: true })
+        });
+        await db.refreshWalletBalances(publicClient);
+      } catch (error) {
+        console.error('Balance refresh error:', error);
+        // Continue anyway
+      }
     }
   }
 
