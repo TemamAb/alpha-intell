@@ -195,14 +195,15 @@ const UNISWAP_V3_POOL_ABI = parseAbi(['function slot0() external view returns (u
 
     // Forging logic...
 if (activeStrategy.type === 'forging') {
-        // Dynamic target discovery + sim demo detection (1% chance for demo)
-        if (Math.random() < 0.01 || block.transactions.some((tx: any) => tx.from?.toLowerCase().includes('mev') || tx.from?.toLowerCase() === '0xd8da6bf26964af9d7eed9e03e53415d37aa96045')) {
+        // Real dynamic target discovery (no sim)
+        const targetTx = block.transactions.some((tx: any) => tx.from?.toLowerCase().includes('mev'));
+        if (targetTx) {
           db.incrementActiveOpps();
           db.getStats().botSystem.orchestrators += 1;
           this.emitBlockchainEvent({
               id: `det-${Date.now()}`,
               type: 'detect',
-              message: `Elite target discovered in block ${block.number}: Dynamic forging opportunity | Bundle ready`,
+              message: `Elite target detected: ${targetTx ? 'Real MEV tx' : 'Monitoring'} | Bundle ready`,
               category: 'detection',
               blockNumber: this.currentBlock,
               timestamp: new Date().toISOString()
@@ -298,10 +299,7 @@ if (activeStrategy.type === 'forging') {
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Unknown Connection Error';
 console.error(`--- [ACID TEST] FAILED: ${msg} ---`); 
-      console.log('[ENGINE] Live mode continuing with simulation fallback to enable trading stream.');
-      db.setEngineStatus({ ...db.getEngineStatus(), running: true }); // Force enable for demo
-      db.setEngineStatus({ ...db.getEngineStatus(), running: false, mode: 'paper' });
-      return false;
+return false;
     }
   }
 
@@ -348,30 +346,7 @@ console.error(`--- [ACID TEST] FAILED: ${msg} ---`);
     return finalBribe;
   }
 
-private async executeArbTrade(arbOpp: ArbOpportunity, strategy: Strategy) {
-    // Sim arb execution
-    const profit = arbOpp.profitETH * 0.7; // 30% retention
-    db.addTrade({
-      id: `arb-${Date.now()}`,
-      pair: `${arbOpp.tokenIn.slice(-6)}/${arbOpp.tokenOut.slice(-6)}`,
-      type: 'arb',
-      price: arbOpp.priceDiff,
-      amount: Number(arbOpp.amountIn) / 1e18,
-      profit,
-      arbOpp,
-      status: 'completed' as const,
-      timestamp: new Date().toISOString(),
-      strategyId: strategy.id
-    });
-    this.emitBlockchainEvent({
-      id: `arb-success-${Date.now()}`,
-      type: 'success',
-      message: `Arb executed: ${arbOpp.profitETH.toFixed(4)} ETH gross → ${profit.toFixed(4)} net`,
-      category: 'success',
-      blockNumber: this.currentBlock,
-      timestamp: new Date().toISOString()
-    });
-  }
+// Removed sim arb exec - real execution via executeOnChainTrade only
 
   private async executeOnChainTrade(targetHash: Hash, strategy: Strategy) {
     const status = db.getEngineStatus();
