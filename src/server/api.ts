@@ -50,9 +50,7 @@ router.post("/readiness/update", async (req, res) => {
   const { id, status, value } = req.body;
   
   // Architect Fix: Add validation logic before allowing 'completed' status
-  if (id === 'rpc' && status === 'completed') {
-    try {
-      const client = createPublicClient({
+
         chain: mainnet,
         transport: http(process.env.ALCHEMY_ETH_KEY ? `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_ETH_KEY}` : undefined)
       });
