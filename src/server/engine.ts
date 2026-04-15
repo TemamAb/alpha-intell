@@ -205,8 +205,6 @@ class TradingEngine {
       }
     }
 
-const UNISWAP_V3_POOL_ABI = parseAbi(['function slot0() external view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked)']);
-
     // Forging logic...
 if (activeStrategy.type === 'forging') {
         // Use optimized targets to reduce RPC load and focus on high-alpha wallets

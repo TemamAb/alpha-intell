@@ -494,14 +494,6 @@ private saveTimeout: NodeJS.Timeout | null = null;
         if (this.stats.activeOpps > 0) this.stats.activeOpps--;
     }, 10000);
   }
-}
-
-export const db = new Database();
-
-  updateTargetWalletMetrics(address: string, tradesPerHour: number) {
-    const target = this.targetWallets.find(t => t.address.toLowerCase() === address.toLowerCase());
-    if (target) {
-      target.tradesPerHour = tradesPerHour;
       target.totalProfitDay = parseFloat((tradesPerHour * target.profitPerTrade).toFixed(3));
       this.save();
     }
