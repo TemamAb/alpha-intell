@@ -12,6 +12,7 @@ import StrategyManager from './components/StrategyManager';
 import LiveTrades from './components/LiveTrades';
 import AiCopilot from './components/AiCopilot';
 import LiveReadiness from './components/LiveReadiness';
+import BlockchainStreaming from './components/BlockchainStreaming';
 import { Stats, Wallet, LatencyData, EngineStatus, Strategy, Currency, TargetWallet } from './types';
 
 export default function App() {
@@ -81,8 +82,9 @@ export default function App() {
   }, [refreshRate]);
 
   const handleStart = async () => {
-    const isPaper = confirm("Start Engine in PAPER TRADING (Simulation) mode?\n\nClick OK for Paper Trading.\nClick Cancel for LIVE Trading (Uses Real Funds!).");
-    const mode = isPaper ? 'paper' : 'live';
+    // SYSTEM UPGRADE: AlphaMark Pro now defaults to 100% Live Trading on Trigger.
+    // Simulation/Paper mode logic has been deprecated for high-performance live execution.
+    const mode = 'live';
     
     try {
       const res = await fetch('/api/control/start', {
@@ -95,9 +97,13 @@ export default function App() {
         })
       });
       const data = await res.json();
-      if (data.success) setEngineStatus(data.status);
+      if (data.success) {
+        setEngineStatus(data.status);
+      } else {
+        alert(`Safety Block: ${data.error}`);
+      }
     } catch (e) {
-      alert("Failed to start engine");
+      alert("Failed to start Live Engine");
     }
   };
 
@@ -156,6 +162,22 @@ export default function App() {
     }
   };
 
+  const handleUpdateStrategyConfig = async (id: string, config: Partial<Strategy['config']>) => {
+    try {
+      const res = await fetch('/api/strategy/update-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, config })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setStrategies(strategies.map(s => s.id === id ? { ...s, config: { ...s.config, ...config } } : s));
+      }
+    } catch (e) {
+      alert("Failed to update strategy configuration");
+    }
+  };
+
   const totalBalance = wallets.reduce((acc, w) => acc + w.balance, 0);
 
   return (
@@ -198,6 +220,7 @@ export default function App() {
               ethPrice={stats?.ethPrice || 2500}
               stats={stats}
               targetWallets={targetWallets}
+              onUpdateConfig={handleUpdateStrategyConfig}
             />
           )}
           {activePage === 'wallet' && (
@@ -216,6 +239,7 @@ export default function App() {
             />
           )}
           {activePage === 'copilot' && <AiCopilot stats={stats} />}
+          {activePage === 'blockchain-streaming' && <BlockchainStreaming mode={engineStatus.mode} />}
           {activePage === 'settings' && (
             <LiveReadiness 
               strategies={strategies} 
@@ -227,5 +251,3 @@ export default function App() {
     </div>
   );
 }
-
-

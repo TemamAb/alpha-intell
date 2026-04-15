@@ -8,48 +8,19 @@ All deployments MUST use the following environment variables. Never hardcode sec
 | Variable | Description | Source |
 |----------|-------------|--------|
 | `GEMINI_API_KEY` | AI Copilot Intelligence | Google AI Studio |
-| `OPENAI_API_KEY` | Fallback AI API for redundancy | OpenAI Platform |
 | `PIMLICO_API_KEY` | Account Abstraction Paymaster | Pimlico Dashboard |
 | `PIMLICO_BUNDLER_URL` | ERC-4337 Bundler Endpoint | Pimlico Dashboard |
 | `NODE_ENV` | Set to `production` | Deployment Platform |
+| `ENCRYPTION_SECRET` | Secure Vault Key | User Defined |
 
-## 2. Current System Status
-
-### ⚠️ **Simulation Mode Active**
-**Important**: AlphaMark Pro currently operates in **100% simulation/paper trading mode**. All trading activities, profits, and balances displayed are **fabricated for demonstration purposes**. No real blockchain transactions, wallet operations, or on-chain executions occur.
-
-**What Works in Simulation:**
-- ✅ Real-time trade simulation (every 8 seconds)
-- ✅ Dynamic profit/loss calculations
-- ✅ Multi-chain protocol routing
-- ✅ MEV bundle simulation
-- ✅ AI copilot integration
-- ✅ Dashboard telemetry
-
-**Missing for Live Trading:**
-- ❌ Real blockchain RPC interactions
-- ❌ Wallet signature operations
-- ❌ Smart contract executions
-- ❌ Pimlico bundler submissions
-- ❌ On-chain balance verification
-
-**Live Trading Readiness Checklist:**
-- [ ] Implement viem/ethers for blockchain calls
-- [ ] Add wallet private key management (secure)
-- [ ] Integrate Pimlico ERC-4337 bundler
-- [ ] Connect to production RPC providers
-- [ ] Add real transaction broadcasting
-- [ ] Implement on-chain balance monitoring
-
-**To Enable Live Trading**: Contact the development team for blockchain integration implementation.
-
-## 4. Platform-Specific Workflows
+## 2. Platform-Specific Workflows
 
 ### A. Render (Recommended for Full-Stack)
 1. **New Web Service**: Connect your GitHub repo.
-2. **Build Command**: `npm run build`
+2. **Disk**: Attach a 1GB Persistent Disk mounted at `/data` to preserve `db.json`.
+3. **Build Command**: `npm run build`
 3. **Start Command**: `npm start` (Ensure `server.ts` is compiled or run via `tsx`)
-4. **Environment Variables**: Add all required keys from the Environment Configuration table above.
+4. **Environment Variables**: Add all keys found in `src/.env` to the Render Dashboard.
 
 ### B. Google Cloud Run (Enterprise Grade)
 1. **Dockerize**: Use a multi-stage `Dockerfile` (Node 20+).
@@ -69,17 +40,16 @@ All deployments MUST use the following environment variables. Never hardcode sec
 2. **Build**: `npm run build`.
 3. **Output**: `dist`.
 
-## 5. Security Hardening
+## 3. Security Hardening
 - **Private Key Management**: In production, use a Secret Manager (AWS Secrets Manager, GCP Secret Manager) instead of `.env`.
 - **RPC Rotation**: Implement a fallback mechanism for RPC providers to prevent single-point-of-failure.
 - **Rate Limiting**: Enable Express rate limiting on `/api/control/*` endpoints.
 
-## 6. Post-Deployment Checklist
+## 4. Post-Deployment Checklist
 - [ ] Verify SSL/TLS is active.
-- [ ] Confirm simulation mode is active (no real transactions).
-- [ ] Test AI copilot functionality.
-- [ ] Validate dashboard telemetry updates.
-- [ ] For future live trading: Implement real blockchain integration.
+- [ ] Test Account Abstraction (AA) wallet initialization.
+- [ ] Confirm Paymaster has sufficient gas balance.
+- [ ] Validate RPC quota tracking is active.
 
 ---
 *Standardized by AlphaMark AI Agent v2.0*

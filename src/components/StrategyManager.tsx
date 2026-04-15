@@ -30,11 +30,15 @@ interface StrategyManagerProps {
   ethPrice: number;
   stats: (Stats & { ethPrice: number }) | null;
   targetWallets: TargetWallet[];
+  onUpdateConfig: (id: string, config: Partial<Strategy['config']>) => void;
 }
 
 type SortKey = keyof TargetWallet;
 
-export default function StrategyManager({ strategies, onToggle, currency, ethPrice, stats, targetWallets }: StrategyManagerProps) {
+export default function StrategyManager({ strategies, onToggle, currency, ethPrice, stats, targetWallets, onUpdateConfig }: StrategyManagerProps) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editConfig, setEditConfig] = useState<Partial<Strategy['config']>>({});
+
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' }>({
     key: 'forgingEfficiency',
     direction: 'desc'
@@ -59,6 +63,16 @@ export default function StrategyManager({ strategies, onToggle, currency, ethPri
       direction = 'desc';
     }
     setSortConfig({ key, direction });
+  };
+
+  const handleEdit = (strategy: Strategy) => {
+    setEditingId(strategy.id);
+    setEditConfig({ ...strategy.config });
+  };
+
+  const handleSave = (id: string) => {
+    onUpdateConfig(id, editConfig);
+    setEditingId(null);
   };
 
   const SortIcon = ({ column }: { column: SortKey }) => {
@@ -228,42 +242,144 @@ export default function StrategyManager({ strategies, onToggle, currency, ethPri
       {/* Active Forging Nodes Section - REPLACING OLD METRICS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {strategies.map((strategy) => (
-          <div key={strategy.id} className="bg-slate-900/40 backdrop-blur-sm rounded-xl p-5 border border-white/5 shadow-xl flex items-center justify-between group hover:border-blue-500/30 transition-all">
-            <div className="flex items-center gap-4">
-              <div className={cn(
-                "p-3 rounded-lg bg-slate-800 group-hover:bg-blue-500/10 transition-colors",
-                strategy.status === 'active' ? "text-blue-400" : "text-gray-500"
-              )}>
-                <Bot className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">{strategy.name}</h4>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{strategy.type}</span>
-                  <span className="text-[10px] text-gray-700">•</span>
-                  <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">
-                    {formatVal(strategy.config.minProfitThreshold)} Min Gap
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Status</div>
+          <div key={strategy.id} className="space-y-4">
+            <div className={cn(
+              "bg-slate-900/40 backdrop-blur-sm rounded-xl p-5 border border-white/5 shadow-xl flex items-center justify-between group hover:border-blue-500/30 transition-all",
+              editingId === strategy.id && "border-blue-500/50 ring-1 ring-blue-500/20"
+            )}>
+              <div className="flex items-center gap-4">
                 <div className={cn(
-                  "text-[10px] font-bold uppercase tracking-widest",
-                  strategy.status === 'active' ? "text-emerald-500" : "text-yellow-500"
+                  "p-3 rounded-lg bg-slate-800 group-hover:bg-blue-500/10 transition-colors",
+                  strategy.status === 'active' ? "text-blue-400" : "text-gray-500"
                 )}>
-                  {strategy.status}
+                  <Bot className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">{strategy.name}</h4>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{strategy.type}</span>
+                    <span className="text-[10px] text-gray-700">•</span>
+                    <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">
+                      {formatVal(strategy.config.minProfitThreshold)} Min Gap
+                    </span>
+                  </div>
                 </div>
               </div>
-              <button 
-                onClick={() => onToggle(strategy.id, strategy.status === 'active' ? 'paused' : 'active')}
-                className="p-2 bg-slate-800 hover:bg-slate-700 text-gray-400 hover:text-white rounded-lg transition-all"
-              >
-                {strategy.status === 'active' ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-              </button>
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Status</div>
+                  <div className={cn(
+                    "text-[10px] font-bold uppercase tracking-widest",
+                    strategy.status === 'active' ? "text-emerald-500" : "text-yellow-500"
+                  )}>
+                    {strategy.status}
+                  </div>
+                </div>
+                <button 
+                  onClick={() => handleEdit(strategy)}
+                  className={cn(
+                    "p-2 hover:bg-slate-700 rounded-lg transition-all",
+                    editingId === strategy.id ? "bg-blue-600 text-white" : "bg-slate-800 text-gray-400 hover:text-white"
+                  )}
+                >
+                  <Settings2 className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => onToggle(strategy.id, strategy.status === 'active' ? 'paused' : 'active')}
+                  className="p-2 bg-slate-800 hover:bg-slate-700 text-gray-400 hover:text-white rounded-lg transition-all"
+                >
+                  {strategy.status === 'active' ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
+
+            {editingId === strategy.id && (
+              <div className="bg-slate-900/60 border border-blue-500/30 rounded-xl p-5 animate-in fade-in slide-in-from-top-2 space-y-4">
+                <h4 className="text-[10px] font-bold text-blue-400 uppercase tracking-widest flex items-center gap-2">
+                  <Settings2 className="w-3 h-3" />
+                  Node Production Configuration
+                </h4>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-2">
+                      Mainnet Contract Address
+                      <Tooltip content="The deployed smart contract address that the bot will interact with for this specific strategy.">
+                        <Info className="w-3 h-3 text-gray-700" />
+                      </Tooltip>
+                    </label>
+                    <div className="flex gap-2">
+                      <input 
+                        type="text"
+                        value={editConfig.contractAddress || ''}
+                        onChange={(e) => setEditConfig({ ...editConfig, contractAddress: e.target.value })}
+                        placeholder="0x..."
+                        className="flex-1 bg-slate-950/50 border border-white/10 rounded px-3 py-2 text-xs text-white font-mono placeholder:text-gray-700 focus:border-blue-500 outline-none transition-all"
+                      />
+                      <button 
+                        onClick={() => {
+                          // Suggest a standard Uniswap V3 Router or similar if empty
+                          setEditConfig({ ...editConfig, contractAddress: '0xE592427A0AEce92De3Edee1F18E0157C05861564' });
+                        }}
+                        className="px-2 py-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-[8px] font-bold uppercase rounded border border-blue-500/20 transition-all"
+                      >
+                        Auto-Detect Protocol
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-2">
+                      Max Bribe Percent
+                      <Tooltip content="Maximum percentage of gross profit the bot is allowed to tip block builders to win the gas war.">
+                        <Info className="w-3 h-3 text-gray-700" />
+                      </Tooltip>
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <input 
+                        type="range"
+                        min="0"
+                        max="70"
+                        value={editConfig.maxBribePercent || 0}
+                        onChange={(e) => setEditConfig({ ...editConfig, maxBribePercent: Number(e.target.value) })}
+                        className="flex-1 accent-blue-500 h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer"
+                      />
+                      <span className="text-xs font-bold text-white w-8">{editConfig.maxBribePercent}%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-2">
+                    Hex Call Data / Strategy Payload
+                    <Tooltip content="The pre-encoded hex-formatted data used to execute the specific on-chain swap or arbitrage logic.">
+                      <Info className="w-3 h-3 text-gray-700" />
+                    </Tooltip>
+                  </label>
+                  <textarea 
+                    value={editConfig.callData || ''}
+                    onChange={(e) => setEditConfig({ ...editConfig, callData: e.target.value })}
+                    placeholder="0x..."
+                    rows={2}
+                    className="w-full bg-slate-950/50 border border-white/10 rounded px-3 py-2 text-[10px] text-white font-mono placeholder:text-gray-700 focus:border-blue-500 outline-none transition-all resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => handleSave(strategy.id)}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold rounded transition-all"
+                  >
+                    Save Configuration
+                  </button>
+                  <button 
+                    onClick={() => setEditingId(null)}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-gray-400 text-[10px] font-bold rounded transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>

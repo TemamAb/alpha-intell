@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: alphamark-pro
+    env: node
+    plan: standard
+    buildCommand: npm install && npm run build
+    startCommand: node dist/server.js
+    disk:
+      name: alphamark-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ENCRYPTION_SECRET
+        generateValue: true
+      - key: ALCHEMY_ETH_KEY
+        sync: false
+      - key: INFURA_ETH_KEY
+        sync: false
+      - key: PIMLICO_API_KEY
+        sync: false
+      - key: PIMLICO_BUNDLER_URL
+        sync: false

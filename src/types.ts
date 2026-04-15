@@ -57,7 +57,7 @@ export interface LatencyData {
 
 export interface EngineStatus {
   running: boolean;
-  mode: 'paper' | 'live';
+  mode: 'live';
   gasless: boolean;
   bribeStrategy: 'conservative' | 'aggressive' | 'dynamic';
   flashLoanEnabled: boolean;
@@ -81,6 +81,8 @@ export interface Strategy {
     flashLoanProvider?: 'aave' | 'uniswap' | 'balancer';
     hops?: string[];
     shadowTarget?: string; // For Forging strategy
+    contractAddress?: string;
+    callData?: string;
   };
 }
 
@@ -102,4 +104,6 @@ export interface Trade {
 export interface ReadinessStep {
   id: string;
   status: 'completed' | 'pending' | 'critical';
+  discoveredValue?: string;
+  label?: string;
 }

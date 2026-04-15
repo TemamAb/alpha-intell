@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { AlertTriangle, CheckCircle2, Circle, ExternalLink, ShieldAlert, Key, Globe, Zap, Shield, ArrowRight, Plus, Wallet, Settings, Target, Info } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Circle, ExternalLink, ShieldAlert, Key, Globe, Zap, Shield, ArrowRight, Plus, Wallet, Settings, Target, Info, Edit3, Trash2 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { Strategy } from '@/src/types';
 
@@ -30,6 +30,7 @@ interface Step {
   description: string;
   status: 'completed' | 'pending' | 'critical';
   icon: any;
+  discoveredValue?: string;
   fixInstruction?: string;
   actionLabel?: string;
   tooltip: string;
@@ -94,28 +95,6 @@ export default function LiveReadiness({ strategies, onNavigate }: LiveReadinessP
       tooltip: "The core alpha source. Requires synchronization with top-performing on-chain wallets."
     },
     {
-      id: 'github',
-      title: "GitHub Repository Sync",
-      description: "Push your local AlphaMark configuration to a private GitHub repository for cloud deployment.",
-      status: "pending",
-      icon: Globe,
-      fixInstruction: "1. Create a new private repository on GitHub.\n2. Paste the repository URL below.\n3. AlphaMark will verify the connection and sync your secure environment.",
-      actionLabel: "Configure Sync",
-      tooltip: "Maintains a secure, version-controlled backup of your bot's configuration for cloud deployment."
-    },
-    {
-      id: 'cloud',
-      title: "Cloud Infrastructure Deployment",
-      description: "Deploy AlphaMark to a persistent cloud environment (Render, Vercel, or Google Cloud) for 24/7 execution.",
-      status: "pending",
-      icon: Zap,
-      fixInstruction: "1. Select your preferred cloud provider (Render, Vercel, or GCP).\n2. AlphaMark will generate the deployment configuration.\n3. Click 'Verify Deployment' once the cloud build is green.",
-      actionLabel: "Deploy to Cloud",
-      tooltip: "Ensures 24/7 execution uptime by running the bot on persistent server environments."
-    },
-    {
-    },
-    {
       id: 'blockchain',
       title: "Blockchain Integration",
       description: "Implement viem/ethers library for real blockchain calls and transaction broadcasting.",
@@ -155,6 +134,7 @@ export default function LiveReadiness({ strategies, onNavigate }: LiveReadinessP
       actionLabel: "Monitor Balances",
       tooltip: "Accurate balance tracking from blockchain instead of simulation."
     },
+    {
       id: 'safety',
       title: "Emergency Circuit Breakers",
       description: "Verify that the Emergency Stop kills all active listeners.",
@@ -174,7 +154,11 @@ export default function LiveReadiness({ strategies, onNavigate }: LiveReadinessP
           if (backendStep) {
             // Strategy status is special, it depends on parent state
             if (s.id === 'strategy') return s;
-            return { ...s, status: backendStep.status };
+            return { 
+                ...s, 
+                status: backendStep.status, 
+                discoveredValue: backendStep.discoveredValue 
+            };
           }
           return s;
         }));
@@ -199,43 +183,13 @@ export default function LiveReadiness({ strategies, onNavigate }: LiveReadinessP
   }, [hasActiveForgingStrategy]);
 
   const [fixingId, setFixingId] = useState<string | null>(null);
+  const [inputValue, setInputValue] = useState('');
   const [isLive, setIsLive] = useState(false);
-  const [githubUrl, setGithubUrl] = useState('');
-  const [githubError, setGithubError] = useState<string | null>(null);
   const [deploymentError, setDeploymentError] = useState<string | null>(null);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [selectedCloud, setSelectedCloud] = useState<string | null>(null);
-  const [isDeploying, setIsDeploying] = useState(false);
 
   const validateGithubUrl = (url: string) => {
     const githubRegex = /^https:\/\/github\.com\/[\w-]+\/[\w.-]+$/;
     return githubRegex.test(url);
-  };
-
-  const handleVerifyGithub = async (id: string) => {
-    if (!validateGithubUrl(githubUrl)) {
-      setGithubError('Please enter a valid GitHub repository URL (e.g., https://github.com/user/repo)');
-      return;
-    }
-
-    setGithubError(null);
-    setIsVerifying(true);
-    
-    // Simulate API verification
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setIsVerifying(false);
-    completeStep(id);
-  };
-
-  const handleVerifyCloud = async (id: string) => {
-    if (!selectedCloud) return;
-
-    setIsDeploying(true);
-    // Simulate cloud build/deployment verification
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsDeploying(false);
-    completeStep(id);
   };
 
   const allCompleted = useMemo(() => steps.every(s => s.status === 'completed'), [steps]);
@@ -245,19 +199,33 @@ export default function LiveReadiness({ strategies, onNavigate }: LiveReadinessP
       onNavigate('strategies');
       return;
     }
+    setInputValue('');
     setFixingId(id);
   };
 
   const completeStep = (id: string) => {
     const newStatus = 'completed';
-    setSteps(prev => prev.map(s => s.id === id ? { ...s, status: newStatus } : s));
-    setFixingId(null);
-
     // Persist to backend
     fetch('/api/readiness/update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, status: newStatus })
+      body: JSON.stringify({ id, status: newStatus, value: inputValue })
+    }).then(() => {
+      setSteps(prev => prev.map(s => s.id === id ? { ...s, status: newStatus } : s));
+      setFixingId(null);
+      setInputValue('');
+    });
+  };
+
+  const handleReset = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this configuration? This will disable live mode capabilities for this system.')) return;
+    
+    setSteps(prev => prev.map(s => s.id === id ? { ...s, status: s.id === 'key' ? 'critical' : 'pending' } : s));
+    
+    await fetch('/api/readiness/reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
     });
   };
 
@@ -329,18 +297,46 @@ export default function LiveReadiness({ strategies, onNavigate }: LiveReadinessP
                   <h3 className="font-bold text-white flex items-center gap-2">
                     <step.icon className="w-4 h-4 text-blue-500" />
                     {step.title}
+                    {step.status === 'completed' && (
+                      <div className="flex items-center gap-1 ml-2">
+                        <button 
+                          onClick={() => setFixingId(step.id)}
+                          className="p-1 hover:bg-white/10 rounded transition-colors text-gray-400 hover:text-blue-400"
+                          title="Edit Configuration"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                        </button>
+                        <button 
+                          onClick={() => handleReset(step.id)}
+                          className="p-1 hover:bg-white/10 rounded transition-colors text-gray-400 hover:text-red-400"
+                          title="Delete System Configuration"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
                     <Tooltip content={step.tooltip}>
                       <Info className="w-3 h-3 text-gray-600 cursor-help" />
                     </Tooltip>
                   </h3>
-                  <span className={cn(
-                    "text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded",
-                    step.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500' : 
-                    step.status === 'critical' ? 'bg-red-500/10 text-red-500' : 'bg-slate-800 text-gray-500'
-                  )}>
+                  <span 
+                    className={cn(
+                      "text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded",
+                      step.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500' : 
+                      step.status === 'critical' ? 'bg-red-500/10 text-red-500' : 'bg-slate-800 text-gray-500'
+                    )}
+                  >
                     {step.status}
                   </span>
                 </div>
+                
+                {step.discoveredValue && (
+                  <div className="flex items-center gap-2 bg-blue-500/5 border border-blue-500/10 rounded-lg px-3 py-1.5 w-max">
+                    <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Detected:</span>
+                    <span className="text-[10px] font-mono text-gray-300">{step.discoveredValue}</span>
+                  </div>
+                )}
+
                 <p className="text-sm text-gray-400 leading-relaxed">{step.description}</p>
                 
                 {step.status !== 'completed' && (
@@ -355,111 +351,35 @@ export default function LiveReadiness({ strategies, onNavigate }: LiveReadinessP
                           {step.fixInstruction}
                         </p>
                         
-                        {(step.id === 'key' || step.id === 'rpc' || step.id === 'github' || step.id === 'cloud') && (
+                        {(step.id === 'key' || step.id === 'rpc') && (
                           <div className="mt-4 space-y-2">
                             <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
                               {step.id === 'key' ? 'Private Key (Hex)' : 
-                               step.id === 'rpc' ? 'RPC Endpoint URL' : 
-                               step.id === 'github' ? 'GitHub Repository URL' : 'Cloud Provider Selection'}
+                               'RPC Endpoint URL'}
                               <Tooltip content={
                                 step.id === 'key' ? "Your wallet's private key is used locally to sign transactions. It is never transmitted to our servers." :
-                                step.id === 'rpc' ? "The websocket or HTTP URL of your dedicated node provider (e.g., Alchemy, Infura)." :
-                                step.id === 'github' ? "The URL of your private repository where AlphaMark will sync its configuration." :
-                                "Choose the infrastructure provider where your bot will be hosted 24/7."
+                                "The websocket or HTTP URL of your dedicated node provider (e.g., Alchemy, Infura)."
                               }>
                                 <Info className="w-3 h-3 text-gray-700 cursor-help" />
                               </Tooltip>
                             </label>
-                            {step.id === 'cloud' ? (
-                              <div className="grid grid-cols-3 gap-2">
-                                {['Render', 'Vercel', 'GCP'].map(provider => (
-                                  <Tooltip key={provider} content={`Deploy AlphaMark to ${provider}'s high-availability infrastructure.`}>
-                                    <button 
-                                      onClick={() => setSelectedCloud(provider)}
-                                      className={cn(
-                                        "w-full px-3 py-2 border rounded text-[10px] font-bold transition-all flex flex-col items-center gap-1",
-                                        selectedCloud === provider 
-                                          ? "bg-blue-600/20 border-blue-500 text-white" 
-                                          : "bg-slate-900 border-white/10 text-gray-400 hover:border-blue-500/50 hover:text-gray-200"
-                                      )}
-                                    >
-                                      <Globe className={cn("w-3 h-3", selectedCloud === provider ? "text-blue-400" : "text-gray-600")} />
-                                      {provider}
-                                    </button>
-                                  </Tooltip>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="space-y-2">
-                                <input 
-                                  type={step.id === 'key' ? 'password' : 'text'}
-                                  value={step.id === 'github' ? githubUrl : undefined}
-                                  onChange={(e) => {
-                                    if (step.id === 'github') {
-                                      setGithubUrl(e.target.value);
-                                      setGithubError(null);
-                                    }
-                                  }}
-                                  placeholder={
-                                    step.id === 'key' ? '0x...' : 
-                                    step.id === 'rpc' ? 'https://eth-mainnet.g.alchemy.com/v2/...' :
-                                    'https://github.com/username/alphamark-pro'
-                                  }
-                                  className={cn(
-                                    "w-full bg-slate-900 border rounded px-3 py-2 text-xs text-white placeholder:text-gray-700 focus:border-blue-500 outline-none transition-all",
-                                    step.id === 'github' && githubError ? "border-red-500/50" : "border-white/10"
-                                  )}
-                                />
-                                {step.id === 'github' && githubError && (
-                                  <p className="text-[10px] text-red-400 font-medium">{githubError}</p>
-                                )}
-                              </div>
-                            )}
+                            <div className="space-y-2">
+                              <input 
+                                type={step.id === 'key' ? 'password' : 'text'}
+                                placeholder={
+                                  step.id === 'key' ? '0x...' : 
+                                  'https://eth-mainnet.g.alchemy.com/v2/...'
+                                }
+                                className="w-full bg-slate-900 border border-white/10 rounded px-3 py-2 text-xs text-white placeholder:text-gray-700 focus:border-blue-500 outline-none transition-all"
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.target.value)}
+                              />
+                            </div>
                           </div>
                         )}
 
                         <div className="mt-4 flex gap-2">
-                          {step.id === 'github' ? (
-                            <Tooltip content="Triggers a secure handshake with GitHub to verify repository access and sync status.">
-                              <button 
-                                disabled={isVerifying}
-                                onClick={() => handleVerifyGithub(step.id)}
-                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold rounded transition-all flex items-center gap-1 disabled:opacity-50"
-                              >
-                                {isVerifying ? (
-                                  <>
-                                    <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                    Verifying Connection...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Plus className="w-3 h-3" />
-                                    Verify Connection
-                                  </>
-                                )}
-                              </button>
-                            </Tooltip>
-                          ) : step.id === 'cloud' ? (
-                            <Tooltip content="Initiates a build check on your selected cloud provider to ensure the environment is ready for deployment.">
-                              <button 
-                                disabled={!selectedCloud || isDeploying}
-                                onClick={() => handleVerifyCloud(step.id)}
-                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold rounded transition-all flex items-center gap-1 disabled:opacity-50"
-                              >
-                                {isDeploying ? (
-                                  <>
-                                    <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                    Verifying Build...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Zap className="w-3 h-3" />
-                                    Verify Deployment
-                                  </>
-                                )}
-                              </button>
-                            </Tooltip>
-                          ) : (
+                          {step.id !== 'strategy' && (
                             <Tooltip content="Saves your configuration to the local secure storage and marks this requirement as met.">
                               <button 
                                 onClick={() => completeStep(step.id)}
@@ -509,49 +429,4 @@ export default function LiveReadiness({ strategies, onNavigate }: LiveReadinessP
               {deploymentError ? (
                 <span className="text-red-400 font-medium">{deploymentError}</span>
               ) : (
-                allCompleted ? "All systems verified. Ready for live execution." : "Complete the checklist to enable live trading."
-              )}
-            </p>
-          </div>
-        </div>
-        
-        <Tooltip content={allCompleted ? "Final confirmation to deploy AlphaMark to cloud infrastructure." : "Complete all checklist items to enable deployment."}>
-          <button 
-            disabled={!allCompleted || isLive}
-            onClick={handleGoLive}
-            className={cn(
-              "px-8 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2",
-              allCompleted 
-                ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20" 
-                : "bg-slate-800 text-gray-600 cursor-not-allowed"
-            )}
-          >
-            {isLive ? (
-              <>
-                <span className="flex h-2 w-2 rounded-full bg-white animate-pulse" />
-                AlphaMark Live on Cloud
-              </>
-            ) : (
-              <>
-                <Zap className="w-4 h-4" />
-                {allCompleted ? 'Confirm & Deploy' : 'Complete Readiness First'}
-              </>
-            )}
-          </button>
-        </Tooltip>
-      </div>
-
-      {!allCompleted && (
-        <div className="bg-red-900/10 border border-red-900/20 rounded-xl p-6">
-          <h4 className="text-red-500 font-bold mb-2 flex items-center gap-2 text-sm">
-            <ShieldAlert className="w-5 h-5" />
-            Safety Protocol Active
-          </h4>
-          <p className="text-xs text-red-900/80 leading-relaxed">
-            Live Mode is locked until all institutional security requirements are met. This prevents accidental deployment with public RPCs or insecure keys, protecting your capital from avoidable execution errors.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
+    
