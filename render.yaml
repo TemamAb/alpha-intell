@@ -1,6 +1,7 @@
 services:
   - type: web
     name: alphamark-pro
+    healthCheckPath: /ping
     env: node
     plan: standard
     buildCommand: npm install && npm run build
