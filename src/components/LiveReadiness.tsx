@@ -429,4 +429,33 @@ export default function LiveReadiness({ strategies, onNavigate }: LiveReadinessP
               {deploymentError ? (
                 <span className="text-red-400 font-medium">{deploymentError}</span>
               ) : (
-    
+                allCompleted 
+                  ? "System verified. Ready for institutional-grade execution." 
+                  : "Complete all critical security and infrastructure steps above."
+              )}
+            </p>
+          </div>
+        </div>
+
+        <button 
+          onClick={handleGoLive}
+          disabled={!allCompleted || isLive}
+          className={cn(
+            "px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2",
+            isLive 
+              ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" 
+              : allCompleted 
+                ? "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20" 
+                : "bg-slate-800 text-gray-500 cursor-not-allowed"
+          )}
+        >
+          {isLive ? (
+            <><CheckCircle2 className="w-4 h-4" /> SYSTEM LIVE</>
+          ) : (
+            <><Zap className="w-4 h-4" /> GO LIVE</>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
