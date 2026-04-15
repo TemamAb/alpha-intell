@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import OpenAI from 'openai';
-import { createPublicClient, http, fallback } from 'viem';
+import { createPublicClient, http, fallback, webSocket } from 'viem';
 import { mainnet } from 'viem/chains';
 import { db } from './db';
 import crypto from 'crypto';
@@ -78,7 +78,10 @@ router.post("/readiness/update", async (req, res) => {
   if (id === 'balance' && status === 'completed') {
     // Refresh wallet balances on-chain
     const transports = [];
-    if (process.env.ALCHEMY_ETH_KEY) transports.push(http(`https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_ETH_KEY}`));
+    if (process.env.ALCHEMY_ETH_KEY) {
+      transports.push(http(`https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_ETH_KEY}`));
+      transports.push(webSocket(`wss://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_ETH_KEY}`));
+    }
     if (process.env.INFURA_ETH_KEY) transports.push(http(`https://mainnet.infura.io/v3/${process.env.INFURA_ETH_KEY}`));
     if (process.env.ETH_RPC_URL) transports.push(http(process.env.ETH_RPC_URL));
     if (process.env.POLYGON_RPC_URL) transports.push(http(process.env.POLYGON_RPC_URL));

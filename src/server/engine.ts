@@ -1,6 +1,6 @@
 import { db } from './db';
 import { Trade, Strategy, EngineStatus, Wallet } from '../types';
-import { createPublicClient, createClient, http, fallback, Hash, PublicClient, parseEther, formatEther, encodeFunctionData } from 'viem';
+import { createPublicClient, createClient, http, fallback, Hash, PublicClient, parseEther, formatEther, encodeFunctionData, webSocket } from 'viem';
 import { mainnet } from 'viem/chains';
 import { pimlicoActions } from "permissionless/actions/pimlico";
 import { privateKeyToAccount } from 'viem/accounts';
@@ -33,8 +33,10 @@ class TradingEngine {
 
   private createClient() {
     const transports = [];
-    if (process.env.ALCHEMY_ETH_KEY) 
+    if (process.env.ALCHEMY_ETH_KEY) {
       transports.push(http(`https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_ETH_KEY}`));
+      transports.push(webSocket(`wss://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_ETH_KEY}`));
+    }
     if (process.env.INFURA_ETH_KEY)
       transports.push(http(`https://mainnet.infura.io/v3/${process.env.INFURA_ETH_KEY}`));
     if (process.env.ETH_RPC_URL)
@@ -45,13 +47,12 @@ class TradingEngine {
       transports.push(http(process.env.BSC_RPC_URL));
     if (process.env.ARBITRUM_RPC_URL)
       transports.push(http(process.env.ARBITRUM_RPC_URL));
-    
+
     // Reliable public fallbacks (avoid blocked merkle.io)
     transports.push(http('https://rpc.ankr.com/eth'));
-    transports.push(http('https://ethereum.publicnode.com')); 
+    transports.push(http('https://ethereum.publicnode.com'));
     transports.push(http('https://1rpc.io/eth'));
 
-    // @ts-ignore
     return createPublicClient({
       chain: mainnet,
       transport: fallback(transports, { rank: true })
@@ -89,6 +90,17 @@ class TradingEngine {
 
       // Initializing Real-Time Mempool Watcher
       console.log("[ENGINE] Initializing 100% Live Mode Operations...");
+
+      // Emit initial status event
+      this.emitBlockchainEvent({
+        id: `init-${Date.now()}`,
+        type: 'scan',
+        message: 'Live mode initialized. Monitoring Ethereum mainnet for target activity.',
+        category: 'scanning',
+        blockNumber: this.currentBlock,
+        timestamp: new Date().toISOString()
+      });
+
       this.unwatch = this.publicClient.watchBlocks({
         includeTransactions: true,
         onBlock: (block) => {
