@@ -1,13 +1,11 @@
 import { db } from './db';
 import { Trade, Strategy, EngineStatus, Wallet } from '../types';
-import { createPublicClient, http, fallback, Hash, PublicClient, parseEther, formatEther, encodeFunctionData } from 'viem';
+import { createPublicClient, createClient, http, fallback, Hash, PublicClient, parseEther, formatEther, encodeFunctionData } from 'viem';
 import { mainnet } from 'viem/chains';
-import { createSmartAccountClient, walletClientToSmartAccountSigner } from "@permissionless/core";
-import { createPimlicoPaymasterClient, createPimlicoBundlerClient } from "permissionless/clients/pimlico";
+import { pimlicoBundlerActions, pimlicoPaymasterActions } from "permissionless/actions/pimlico";
 import { privateKeyToAccount } from 'viem/accounts';
 import { signerToSimpleSmartAccount } from "permissionless/accounts";
-import { createSmartAccountClient as createPermissionlessClient } from "permissionless";
-import { SmartAccountClient } from "permissionless";
+import { createSmartAccountClient, SmartAccountClient } from "permissionless";
 
 export interface BlockchainEvent {
   id: string;
@@ -185,15 +183,15 @@ class TradingEngine {
 
       const paymasterUrl = process.env.PIMLICO_PAYMASTER_URL || cloudBundlerUrl;
 
-      this.smartAccountClient = createPermissionlessClient({
+      this.smartAccountClient = createSmartAccountClient({
         account: simpleAccount,
         chain: mainnet,
         transport: http(cloudBundlerUrl),
         sponsorUserOperation: async (args) => {
-            const paymasterClient = createPimlicoPaymasterClient({
-                transport: http(paymasterUrl),
-                entryPoint: "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
-            });
+            const paymasterClient = createClient({
+              chain: mainnet,
+              transport: http(paymasterUrl)
+            }).extend(pimlicoPaymasterActions({ entryPoint: "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789" }));
             return paymasterClient.sponsorUserOperation(args);
         },
       });
