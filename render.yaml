@@ -14,11 +14,15 @@ services:
         value: production
       - key: ENCRYPTION_SECRET
         generateValue: true
+      - key: EXECUTION_PRIVATE_KEY
+        generateValue: true
+      - key: GITHUB_REPO_URL
+        generateValue: true
       - key: ALCHEMY_ETH_KEY
-        sync: false
+        sync: true
       - key: INFURA_ETH_KEY
-        sync: false
+        sync: true
       - key: PIMLICO_API_KEY
-        sync: false
+        sync: true
       - key: PIMLICO_BUNDLER_URL
-        sync: false
+        sync: true
