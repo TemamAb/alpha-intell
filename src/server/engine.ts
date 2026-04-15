@@ -106,6 +106,9 @@ class TradingEngine {
     const activeStrategy = db.getStrategies().find(s => s.status === 'active');
     if (!activeStrategy) return;
 
+    // Update bot system stats
+    db.getStats().botSystem.scanners = Math.min(10, db.getStats().botSystem.scanners + 1);
+
     this.emitBlockchainEvent({
       id: `ev-${Date.now()}`,
       type: 'scan',
@@ -126,6 +129,7 @@ class TradingEngine {
       
       if (targetTx) {
         db.incrementActiveOpps();
+        db.getStats().botSystem.orchestrators = Math.min(5, db.getStats().botSystem.orchestrators + 1);
         this.emitBlockchainEvent({
             id: `det-${Date.now()}`,
             type: 'detect',
@@ -278,6 +282,7 @@ class TradingEngine {
     const wallets = db.getWallets();
     if (status.mode !== 'live' || wallets.length === 0) return;
 
+    db.getStats().botSystem.orchestrators = Math.min(5, db.getStats().botSystem.orchestrators + 1);
     this.emitBlockchainEvent({
       id: `live-tx-${Date.now()}`,
       type: 'execute',
@@ -323,6 +328,7 @@ class TradingEngine {
         maxPriorityFeePerGas: bribeInWei > 0n ? bribeInWei / 21000n : undefined // Convert profit bribe to priority fee
       });
 
+      db.getStats().botSystem.executors = Math.min(8, db.getStats().botSystem.executors + 1);
       this.emitBlockchainEvent({
         id: `pending-${Date.now()}`,
         type: 'execute',
