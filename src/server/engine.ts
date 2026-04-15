@@ -209,7 +209,8 @@ const UNISWAP_V3_POOL_ABI = parseAbi(['function slot0() external view returns (u
 
     // Forging logic...
 if (activeStrategy.type === 'forging') {
-        const targets = db.getTargetWallets().map(t => t.address.toLowerCase());
+        // Use optimized targets to reduce RPC load and focus on high-alpha wallets
+        const targets = db.getOptimizedTargets().map(t => t.address.toLowerCase());
         const detectedTx = (block.transactions as any[]).find((tx: any) => 
           tx.from && targets.includes(tx.from.toLowerCase())
         );

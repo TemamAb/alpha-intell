@@ -228,6 +228,23 @@ private saveTimeout: NodeJS.Timeout | null = null;
 
   getTargetWallets() { return this.targetWallets; }
 
+  /**
+   * Dynamically optimizes the target list based on performance and RPC health.
+   */
+  getOptimizedTargets(): TargetWallet[] {
+    const quotas = this.getRPCQuotas();
+    const isResourceConstrained = quotas.some(q => q.status !== 'healthy');
+
+    // Sort by performance (Profit * Efficiency)
+    const sorted = [...this.targetWallets].sort((a, b) => 
+      (b.profitPerTrade * b.forgingEfficiency) - (a.profitPerTrade * a.forgingEfficiency)
+    );
+
+    // If resources are low, only return the top 50% of performers (min 2)
+    const limit = isResourceConstrained ? Math.max(2, Math.floor(sorted.length / 2)) : sorted.length;
+    return sorted.slice(0, limit);
+  }
+
   // FIXME: Hardcoded price is a blocker for live mode production accuracy. 
   // Integrate Chainlink or Uniswap V3 Oracle in Production.
   private ethPrice: number = 0;
