@@ -509,3 +509,6 @@ private saveTimeout: NodeJS.Timeout | null = null;
     this.stats.botSystem.memoryUsage = mem;
     // Save is handled by general throttled loop
   }
+}
+
+export const db = new Database();
