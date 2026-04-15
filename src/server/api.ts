@@ -50,12 +50,7 @@ router.post("/readiness/update", async (req, res) => {
   const { id, status, value } = req.body;
   
 
-      });
-      await client.getBlockNumber();
-    } catch (e) {
-      return res.status(400).json({ success: false, error: "Invalid RPC Key: Provider connection failed." });
-    }
-  }
+
 
   // If a manual value is provided (e.g. from UI fix), update the wallet/RPC record
   if (value) {
