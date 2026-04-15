@@ -1,11 +1,13 @@
 import { db } from './db';
 import { Trade, Strategy, EngineStatus, Wallet } from '../types';
-import { createPublicClient, createClient, http, fallback, Hash, PublicClient, parseEther, formatEther, encodeFunctionData, webSocket } from 'viem';
+import { createPublicClient, createClient, http, fallback, Hash, PublicClient, parseEther, formatEther, encodeFunctionData, webSocket, parseAbi } from 'viem';
 import { mainnet } from 'viem/chains';
 import { pimlicoActions } from "permissionless/actions/pimlico";
 import { privateKeyToAccount } from 'viem/accounts';
 import { toSimpleSmartAccount } from "permissionless/accounts";
 import { createSmartAccountClient, SmartAccountClient } from "permissionless";
+
+const UNISWAP_V3_POOL_ABI = parseAbi(['function slot0() external view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked)']);
 
 export interface BlockchainEvent {
   id: string;
