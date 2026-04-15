@@ -40,7 +40,7 @@ export default function StrategyManager({ strategies, onToggle, currency, ethPri
   const [editConfig, setEditConfig] = useState<Partial<Strategy['config']>>({});
 
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' }>({
-    key: 'forgingEfficiency',
+    key: 'profitPerTrade',
     direction: 'desc'
   });
 
