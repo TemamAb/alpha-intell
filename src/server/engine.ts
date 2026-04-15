@@ -46,9 +46,10 @@ class TradingEngine {
     if (process.env.ARBITRUM_RPC_URL)
       transports.push(http(process.env.ARBITRUM_RPC_URL));
     
-    // Restoration Fix: Include public fallback with lower rank to ensure 100% uptime 
-    // while prioritizing private free-tier keys for execution speed.
-    transports.push(http());
+    // Reliable public fallbacks (avoid blocked merkle.io)
+    transports.push(http('https://rpc.ankr.com/eth'));
+    transports.push(http('https://ethereum.publicnode.com')); 
+    transports.push(http('https://1rpc.io/eth'));
 
     return createPublicClient({
       chain: mainnet,

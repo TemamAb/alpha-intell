@@ -158,22 +158,34 @@ class Database {
     }
   }
 
+private saveTimeout: NodeJS.Timeout | null = null;
+  private lastData: any = null;
+
   private save() {
-    try {
-      const dir = path.dirname(DB_PATH);
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      const data = {
-        readiness: this.readiness,
-        wallets: this.wallets,
-        strategies: this.strategies,
-        stats: this.stats,
-        engineStatus: this.engineStatus,
-        trades: this.trades
-      };
-      fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
-    } catch (e) {
-      console.error('[DB] Save Error:', e);
-    }
+    if (this.saveTimeout) return;
+    
+    this.saveTimeout = setTimeout(() => {
+      try {
+        const dir = path.dirname(DB_PATH);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        const data = {
+          readiness: this.readiness,
+          wallets: this.wallets,
+          strategies: this.strategies,
+          stats: this.stats,
+          engineStatus: this.engineStatus,
+          trades: this.trades
+        };
+        // Only save if changed (prevent HMR loop)
+        if (JSON.stringify(data) !== this.lastData) {
+          fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+          this.lastData = JSON.stringify(data);
+        }
+      } catch (e) {
+        console.error('[DB] Save Error:', e);
+      }
+      this.saveTimeout = null;
+    }, 500); // Debounce 500ms
   }
 
   private targetWallets: TargetWallet[] = [
