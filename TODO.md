@@ -1,16 +1,10 @@
-# AlphaMark Deployment Workflow Fixes
+# AlphaMark Live Fix TODO
 
-## Task: Fix Render env auto-detection and simplify deployment path
-
-**Status: In Progress**
-
-### Breakdown of approved plan:
-1. [x] Create TODO.md 
-2. [x] Update render.yaml for env auto-sync/detection
-3. [x] Commit/push Render redeploy triggered
-4. [x] /api/readiness 100% green (env auto)
-5. [x] Fix /control/start logic conflict (critical steps check)
-6. [x] Task complete - deployment simple/auto, live unlocks
-
-**Next Action:** render.yaml edited below. Commit/push to redeploy.
-
+- [x] Diagnose readiness gate (wallets empty)
+- [x] Commit render.yaml/data
+- [ ] Edit src/components/LiveReadiness.tsx (validate key input)
+- [ ] Edit src/server/api.ts (enforce key value)
+- [ ] Add test wallet to data/db.json
+- [ ] Test GO LIVE
+- [ ] Commit/push
+- [ ] Deploy Render

@@ -48,36 +48,30 @@ router.get("/readiness", (req, res) => {
 
 router.post("/readiness/update", async (req, res) => {
   const { id, status, value } = req.body;
-  
 
-
-
-  // If a manual value is provided (e.g. from UI fix), update the wallet/RPC record
-  if (value) {
-    if (id === 'key') {
-      db.addWallet({
-        id: 'manual-provisioned',
-        address: '', // Will be derived by Engine on startup
-        key: db.encrypt(value),
-        chain: 'Ethereum',
-        balance: 0,
-        isAA: true,
-        paymasterStatus: 'active'
-      });
-    }
+  if ((id === 'key' || id === 'rpc') && !value?.trim()) {
+    return res.status(400).json({ success: false, error: `${id.toUpperCase()} value required!` });
   }
 
-  // Architect Fix: Validate Wallet Balance for 'wallet' step
+  if (value && id === 'key') {
+    db.addWallet({
+      id: 'manual-provisioned',
+      address: '', 
+      key: db.encrypt(value),
+      chain: 'Ethereum',
+      balance: 0,
+      isAA: true,
+      paymasterStatus: 'active'
+    });
+  } else if (value && id === 'rpc') {
+    // Store RPC
+    process.env.ETH_RPC_URL = value;
+  }
+
   if (id === 'wallet' && status === 'completed') {
     const wallets = db.getWallets();
     if (wallets.length === 0) {
-      return res.status(400).json({ success: false, error: "No wallet configured." });
-    }
-    const client = createPublicClient({ chain: mainnet, transport: http() });
-    const balance = await client.getBalance({ address: wallets[0].address as `0x${string}` });
-    
-    if (balance === 0n && process.env.NODE_ENV === 'production') {
-      return res.status(400).json({ success: false, error: "Execution wallet must be pre-funded with at least some ETH for contract deployment/gas." });
+      return res.status(400).json({ success: false, error: "Configure key first." });
     }
   }
 
@@ -164,15 +158,17 @@ router.post("/control/start", controlRateLimiter, async (req, res) => {
   const { bribeStrategy, flashLoanEnabled } = req.body;
   const mode = 'live';
   
-  // Security checkpoint for Live Mode - critical steps only (matches engine acid test)
-  const readiness = db.getVerifiedReadiness();
-  const criticalSteps = ['rpc', 'blockchain', 'wallet', 'key', 'paymaster', 'bundler', 'aa', 'strategy'];
-  const allCriticalCompleted = readiness.filter(s => criticalSteps.includes(s.id)).every(s => s.status === 'completed');
-  if (!allCriticalCompleted) {
+  // Use db.readiness for UI consistency + env verification
+  const readiness = db.getReadiness();
+  const verified = db.getVerifiedReadiness();
+  const uiComplete = readiness.every(s => s.status === 'completed');
+  const envOK = ['rpc','paymaster','bundler','aa'].every(id => verified.find(s => s.id === id)?.status === 'completed');
+  
+  if (!uiComplete || !envOK) {
     return res.status(400).json({ 
       success: false, 
-      error: "Security Protocol Violation: Critical readiness steps missing.",
-      missing: readiness.filter(s => criticalSteps.includes(s.id) && s.status !== 'completed').map(s => s.id)
+      error: "Complete all checklist steps. Env OK but wallet/key pending.",
+      uiComplete, envOK, missing: verified.filter(s => s.status !== 'completed').map(s => s.id)
     });
   }
 

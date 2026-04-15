@@ -203,18 +203,28 @@ export default function LiveReadiness({ strategies, onNavigate }: LiveReadinessP
     setFixingId(id);
   };
 
-  const completeStep = (id: string) => {
+const completeStep = (id: string) => {
+    if ((id === 'key' || id === 'rpc') && !inputValue.trim()) {
+      alert(`Value required for ${id.toUpperCase()} configuration!`);
+      return;
+    }
     const newStatus = 'completed';
     // Persist to backend
     fetch('/api/readiness/update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, status: newStatus, value: inputValue })
-    }).then(() => {
-      setSteps(prev => prev.map(s => s.id === id ? { ...s, status: newStatus } : s));
-      setFixingId(null);
-      setInputValue('');
-    });
+    }).then((res) => res.json()).then((data) => {
+      if (data.success !== false) {
+        setSteps(prev => prev.map(s => s.id === id ? { ...s, status: newStatus, discoveredValue: inputValue.slice(0, 20) + '...' } : s));
+        setFixingId(null);
+        setInputValue('');
+        // Re-fetch wallets if key
+        if (id === 'key') fetch('/api/wallets').then(res => res.json()).then(setWallets);
+      } else {
+        alert('Config failed: ' + data.error);
+      }
+    }).catch(err => alert('Network error'));
   };
 
   const handleReset = async (id: string) => {

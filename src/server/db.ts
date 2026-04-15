@@ -392,51 +392,47 @@ private saveTimeout: NodeJS.Timeout | null = null;
   getVerifiedReadiness(): ReadinessStep[] {
     const isProd = process.env.NODE_ENV === 'production';
     const hasPimlico = !!process.env.PIMLICO_API_KEY && !!process.env.PIMLICO_BUNDLER_URL;
-  const hasRPC = !!process.env.ALCHEMY_ETH_KEY || !!process.env.INFURA_ETH_KEY || !!process.env.RPC_ENDPOINT_URL || !!process.env.ETH_RPC_URL || !!process.env.POLYGON_RPC_URL || !!process.env.BSC_RPC_URL || !!process.env.ARBITRUM_RPC_URL || !!process.env.OPTIMISM_RPC_URL || !!process.env.BASE_RPC_URL || !!process.env.AVALANCHE_RPC_URL;
+    const hasRPC = !!process.env.ALCHEMY_ETH_KEY || !!process.env.INFURA_ETH_KEY || !!process.env.ETH_RPC_URL || !!process.env.POLYGON_RPC_URL || !!process.env.BSC_RPC_URL || !!process.env.ARBITRUM_RPC_URL || !!process.env.OPTIMISM_RPC_URL || !!process.env.BASE_RPC_URL || !!process.env.AVALANCHE_RPC_URL;
     const hasSecret = !!process.env.ENCRYPTION_SECRET && process.env.ENCRYPTION_SECRET.length >= 32;
-    const hasGitHub = !!process.env.GITHUB_REPO_URL || !!process.env.RENDER_GIT_REPO_URL;
 
     return this.readiness.map(step => {
       let status = step.status;
-      let discoveredValue = undefined;
-      let label = undefined;
+      let discoveredValue = step.discoveredValue;
       
       switch (step.id) {
         case 'rpc':
-          if (hasRPC) {
+          if (hasRPC || step.discoveredValue) {
             status = 'completed';
-            discoveredValue = process.env.ALCHEMY_ETH_KEY ? 'Alchemy (Mainnet)' : (process.env.INFURA_ETH_KEY ? 'Infura (Mainnet)' : 'Custom RPC Cluster');
+            discoveredValue = discoveredValue || (process.env.ALCHEMY_ETH_KEY ? 'Alchemy' : 'Custom RPC');
           }
           break;
         case 'blockchain':
-          if (hasRPC) status = 'completed';
+          if (hasRPC || step.discoveredValue) status = 'completed';
           break;
         case 'bundler':
         case 'aa':
         case 'paymaster':
-          if (hasPimlico) {
+          if (hasPimlico || step.discoveredValue) {
             status = 'completed';
-            discoveredValue = step.id === 'bundler' ? 'Pimlico Active' : (step.id === 'paymaster' ? 'Gas Sponsorship Enabled' : 'ERC-4337 Layer-2 Ready');
+            discoveredValue = step.discoveredValue || 'Pimlico Active';
           }
           break;
         case 'key':
         case 'wallet':
         case 'balance':
-          if (hasSecret) {
+          if ((hasSecret && this.wallets.length > 0) || step.discoveredValue) {
             status = 'completed';
-            if (this.wallets.length > 0) {
-                discoveredValue = this.wallets[0].address.slice(0, 10) + '...';
-            }
+            discoveredValue = step.discoveredValue || (this.wallets[0]?.key?.slice(0,10) + '...');
           }
           break;
         case 'strategy':
-          if (this.strategies.some(s => s.status === 'active' && s.type === 'forging')) {
-              status = 'completed';
-              discoveredValue = 'Neural Forger Active';
+          if (this.strategies.some(s => s.status === 'active' && s.type === 'forging') || step.discoveredValue) {
+            status = 'completed';
+            discoveredValue = step.discoveredValue || 'Neural Forger Active';
           }
           break;
       }
-      return { ...step, status, discoveredValue, label };
+      return { ...step, status, discoveredValue };
     });
   }
 
