@@ -174,14 +174,15 @@ router.post("/control/start", controlRateLimiter, (req, res) => {
   const { bribeStrategy, flashLoanEnabled } = req.body;
   const mode = 'live';
   
-  // Security checkpoint for 100% Live Mode
+  // Security checkpoint for Live Mode - critical steps only (matches engine acid test)
   const readiness = db.getVerifiedReadiness();
-  const allCompleted = readiness.every(s => s.status === 'completed');
-  if (!allCompleted) {
+  const criticalSteps = ['rpc', 'blockchain', 'wallet', 'key', 'paymaster', 'bundler', 'aa', 'strategy'];
+  const allCriticalCompleted = readiness.filter(s => criticalSteps.includes(s.id)).every(s => s.status === 'completed');
+  if (!allCriticalCompleted) {
     return res.status(400).json({ 
       success: false, 
-      error: "Security Protocol Violation: Cannot start Live Mode until all readiness requirements are met.",
-      missing: readiness.filter(s => s.status !== 'completed').map(s => s.id)
+      error: "Security Protocol Violation: Critical readiness steps missing.",
+      missing: readiness.filter(s => criticalSteps.includes(s.id) && s.status !== 'completed').map(s => s.id)
     });
   }
 
