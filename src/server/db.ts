@@ -444,10 +444,10 @@ private saveTimeout: NodeJS.Timeout | null = null;
         case 'key':
         case 'wallet':
         case 'balance':
-          if (step.status === 'completed' || step.discoveredValue || (hasSecret && this.wallets.length > 0) || process.env.EXECUTION_PRIVATE_KEY) {
+          if ((hasSecret && this.wallets.length > 0 && this.getDecryptedKey(this.wallets[0].id) !== null) || process.env.EXECUTION_PRIVATE_KEY) {
             status = 'completed';
-            discoveredValue = step.discoveredValue || (this.wallets[0]?.key?.slice(0,10) + '...') || 'Auto-detected';
-          }
+            discoveredValue = (this.wallets[0]?.address?.slice(0, 10) + '...') || 'Auto-detected';
+          } else if (step.status === 'completed' && !hasSecret) status = 'critical'; // If previously completed but secret is gone
           break;
         case 'strategy':
           if (this.strategies.some(s => s.status === 'active' && s.type === 'forging') || step.discoveredValue) {

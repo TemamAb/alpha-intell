@@ -258,7 +258,7 @@ if (activeStrategy.type === 'forging') {
       // 1. Infrastructure Validation
       const chainId = await this.publicClient.getChainId();
       const blockNumber = await this.publicClient.getBlockNumber();
-      this.currentBlock = Number(blockNumber);
+      this.currentBlock = Number(blockNumber); // Ensure currentBlock is set
 
       const readiness = db.getVerifiedReadiness();
       const criticalSteps = ['rpc', 'blockchain', 'wallet'];
@@ -266,16 +266,20 @@ if (activeStrategy.type === 'forging') {
       for (const stepId of criticalSteps) {
         const step = readiness.find(s => s.id === stepId);
         if (!step || step.status !== 'completed') {
-          throw new Error(`CRITICAL_FAILURE: Step ${stepId} is not verified for production.`);
+          throw new Error(`CRITICAL_FAILURE: Readiness step '${stepId}' is not completed. Status: ${step?.status || 'N/A'}.`);
         }
       }
 
       // 2. Initialize Smart Account Client
       const wallets = db.getWallets();
-      if (wallets.length === 0) throw new Error("No execution wallet configured.");
+      if (wallets.length === 0) {
+        throw new Error("No execution wallet configured. Please configure a private key in the UI or via EXECUTION_PRIVATE_KEY env var.");
+      }
       
       const decryptedKey = db.getDecryptedKey(wallets[0].id);
-      if (!decryptedKey) throw new Error("Could not retrieve execution key.");
+      if (!decryptedKey) {
+        throw new Error("Could not retrieve or decrypt execution key. Ensure ENCRYPTION_SECRET is set and key is valid.");
+      }
 
       const owner = privateKeyToAccount(decryptedKey as `0x${string}`);
       // @ts-ignore
@@ -287,24 +291,27 @@ if (activeStrategy.type === 'forging') {
 
       const cloudBundlerUrl = process.env.PIMLICO_BUNDLER_URL;
       if (!cloudBundlerUrl) throw new Error("PIMLICO_BUNDLER_URL missing.");
-
       const paymasterUrl = process.env.PIMLICO_PAYMASTER_URL || cloudBundlerUrl;
 
       // @ts-ignore
-      this.smartAccountClient = createSmartAccountClient({
-        account: simpleAccount,
-        chain: mainnet,
-        bundlerTransport: http(cloudBundlerUrl),
+      try {
+        this.smartAccountClient = createSmartAccountClient({
+          account: simpleAccount,
+          chain: mainnet,
+          bundlerTransport: http(cloudBundlerUrl),
+          // @ts-ignore
+          sponsorUserOperation: async (args) => {
+              const paymasterClient = createClient({
+                chain: mainnet,
+                transport: http(paymasterUrl)
+              }).extend(pimlicoActions({ entryPoint: { address: "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789", version: "0.7" } }));
+              return paymasterClient.sponsorUserOperation(args);
+          },
         // @ts-ignore
-        sponsorUserOperation: async (args) => {
-            const paymasterClient = createClient({
-              chain: mainnet,
-              transport: http(paymasterUrl)
-            }).extend(pimlicoActions({ entryPoint: { address: "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789", version: "0.7" } }));
-            return paymasterClient.sponsorUserOperation(args);
-        },
-      // @ts-ignore
-      }).extend(pimlicoActions({ entryPoint: { address: "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789", version: "0.7" } }));
+        }).extend(pimlicoActions({ entryPoint: { address: "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789", version: "0.7" } }));
+      } catch (e) {
+        throw new Error(`Failed to create Smart Account Client. Check PIMLICO_BUNDLER_URL/PAYMASTER_URL and API Key. Error: ${e instanceof Error ? e.message : e}`);
+      }
       
       // Architect Fix: Safely sync the smart account address to the provisioned wallet
       const activeWallet = wallets.find(w => w.id === 'auto-provisioned');
@@ -314,13 +321,17 @@ if (activeStrategy.type === 'forging') {
       }
 
       // Auditor Fix: Fetch on-chain balances for real-time wallet state monitoring
-      await db.refreshWalletBalances(this.publicClient);
+      try {
+        await db.refreshWalletBalances(this.publicClient);
+      } catch (e) {
+        throw new Error(`Failed to refresh wallet balances. Check RPC connection and wallet address. Error: ${e instanceof Error ? e.message : e}`);
+      }
       
       console.log('--- [ACID TEST] SUCCESS: SYSTEM VERIFIED FOR LIVE PROFIT GENERATION ---');
       return true;
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Unknown Connection Error';
-console.error(`--- [ACID TEST] FAILED: ${msg} ---`); 
+      console.error(`--- [ACID TEST] FAILED: ${msg} ---`); 
 return false;
     }
   }
