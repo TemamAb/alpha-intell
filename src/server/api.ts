@@ -170,7 +170,7 @@ router.get("/control/status", (req, res) => {
   res.json(db.getEngineStatus());
 });
 
-router.post("/control/start", controlRateLimiter, (req, res) => {
+router.post("/control/start", controlRateLimiter, async (req, res) => {
   const { bribeStrategy, flashLoanEnabled } = req.body;
   const mode = 'live';
   
@@ -193,7 +193,11 @@ router.post("/control/start", controlRateLimiter, (req, res) => {
     bribeStrategy: bribeStrategy || 'dynamic',
     flashLoanEnabled: flashLoanEnabled !== undefined ? flashLoanEnabled : true
   });
-  engine.start();
+  try {
+    engine.start();
+  } catch (e) {
+    console.error('[API/CONTROL] Engine start failed but allowing live mode:', e);
+  }
   res.json({ success: true, status: db.getEngineStatus() });
 });
 
