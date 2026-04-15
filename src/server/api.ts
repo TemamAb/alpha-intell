@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import OpenAI from 'openai';
-import { createPublicClient, http, fallback, webSocket } from 'viem';
+import { createPublicClient, http, formatEther } from 'viem';
 import { mainnet } from 'viem/chains';
 import { db } from './db';
 import crypto from 'crypto';
@@ -56,7 +56,7 @@ router.post("/readiness/update", async (req, res) => {
   if (value && id === 'key') {
     db.addWallet({
       id: 'manual-provisioned',
-      address: '',
+      address: '', 
       key: db.encrypt(value),
       chain: 'Ethereum',
       balance: 0,
@@ -72,40 +72,6 @@ router.post("/readiness/update", async (req, res) => {
     const wallets = db.getWallets();
     if (wallets.length === 0) {
       return res.status(400).json({ success: false, error: "Configure key first." });
-    }
-  }
-
-  if (id === 'balance' && status === 'completed') {
-    // Refresh wallet balances on-chain
-    const transports = [];
-    if (process.env.ALCHEMY_ETH_KEY) {
-      transports.push(http(`https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_ETH_KEY}`));
-      transports.push(webSocket(`wss://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_ETH_KEY}`));
-    }
-    if (process.env.INFURA_ETH_KEY) transports.push(http(`https://mainnet.infura.io/v3/${process.env.INFURA_ETH_KEY}`));
-    if (process.env.ETH_RPC_URL) transports.push(http(process.env.ETH_RPC_URL));
-    if (process.env.POLYGON_RPC_URL) transports.push(http(process.env.POLYGON_RPC_URL));
-    if (process.env.BSC_RPC_URL) transports.push(http(process.env.BSC_RPC_URL));
-    if (process.env.ARBITRUM_RPC_URL) transports.push(http(process.env.ARBITRUM_RPC_URL));
-    if (process.env.OPTIMISM_RPC_URL) transports.push(http(process.env.OPTIMISM_RPC_URL));
-    if (process.env.BASE_RPC_URL) transports.push(http(process.env.BASE_RPC_URL));
-    if (process.env.AVALANCHE_RPC_URL) transports.push(http(process.env.AVALANCHE_RPC_URL));
-    transports.push(http('https://rpc.ankr.com/eth'));
-    transports.push(http('https://ethereum.publicnode.com'));
-    transports.push(http('https://1rpc.io/eth'));
-
-    if (transports.length > 0) {
-      try {
-        // @ts-ignore
-        const publicClient = createPublicClient({
-          chain: mainnet,
-          transport: fallback(transports, { rank: true })
-        });
-        await db.refreshWalletBalances(publicClient);
-      } catch (error) {
-        console.error('Balance refresh error:', error);
-        // Continue anyway
-      }
     }
   }
 
@@ -125,13 +91,12 @@ router.get("/forging/targets", (req, res) => {
 });
 
 router.get("/ping", (req, res) => {
-  // Real Telemetry Fix: Report measured latency from the RPC cluster.
-  const latency = db.getEngineStatus().running ? (db.getStats().avgLatency || 1) : 0;
+  const latency = db.getEngineStatus().running ? (db.getStats().avgLatency || 0) : 0;
   res.json({
     ethereum: latency, // Real measured MS
-    polygon: latency,  // Mirrored for cluster health
-    bsc: latency,      // Mirrored for cluster health
-    arbitrum: latency, // Mirrored for cluster health
+    polygon: -1,  // Not currently monitored
+    bsc: -1,      // Not currently monitored
+    arbitrum: -1, // Not currently monitored
   });
 });
 
@@ -301,9 +266,9 @@ router.post("/ai/query", async (req, res) => {
             systemInstruction: `
               You are AlphaMark AI, an institutional-grade trading assistant.
               Current User Telemetry:
-              - Total Profit: ${stats?.totalProfit.toFixed(4)} ETH (Equivalent to $${(stats?.totalProfit * currentEthPrice).toLocaleString()})
+              - Total Profit: ${stats?.totalProfit?.toFixed(4) || '0.0000'} ETH (Equivalent to $${((stats?.totalProfit || 0) * currentEthPrice).toLocaleString()})
               - Current ETH Price: $${currentEthPrice || 'N/A'}
-              - Trading Win Rate: ${stats?.winRate?.toFixed(1)}%
+              - Trading Win Rate: ${stats?.winRate?.toFixed(1) || '0.0'}%
               - Execution Success: ${stats?.totalTrades} completed trades.
 
               CRITICAL: Always refer to profit in ETH unless specifically asked for USD. 
@@ -313,7 +278,6 @@ router.post("/ai/query", async (req, res) => {
           }
         });
 
-        // @ts-ignore
         const result = await response.response;
         responseText = result.text();
       } catch (e) {

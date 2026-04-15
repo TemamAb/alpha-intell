@@ -115,6 +115,11 @@ class TradingEngine {
     const status = db.getEngineStatus();
     if (status.mode !== 'live') return;
 
+    // Update Live System Metrics
+    const cpu = process.cpuUsage();
+    const mem = process.memoryUsage();
+    db.updateSystemMetrics(Math.round((cpu.user + cpu.system) / 1000000), Math.round(mem.heapUsed / 1024 / 1024));
+
     const activeStrategy = db.getStrategies().find(s => s.status === 'active');
     if (!activeStrategy) return;
 
@@ -141,8 +146,11 @@ class TradingEngine {
     ];
 
     for (const poolA of TOP_POOLS) {
+      // Use configured trade amount from strategy or default to a safe 1 ETH test
+      const tradeAmountRaw = activeStrategy.config.tradeAmount || 1;
+      const amountIn = parseEther(tradeAmountRaw.toString());
+
       for (const poolB of TOP_POOLS) if (poolA !== poolB) {
-        const amountIn = parseEther('1000'); // $1k test
         try {
           const [slot0A, slot0B] = await Promise.all([
             this.publicClient.readContract({
@@ -156,11 +164,17 @@ class TradingEngine {
               functionName: 'slot0'
             })
           ]);
-          const priceA = Number(slot0A[0]) / 1e18; // sim sqrtPrice
-          const priceB = Number(slot0B[0]) / 1e18;
+          
+          // Correct Uniswap V3 Price Math: (sqrtPriceX96 / 2^96)^2
+          const priceA = (Number(slot0A[0]) / (2**96))**2;
+          const priceB = (Number(slot0B[0]) / (2**96))**2;
           const priceDiff = Math.abs(priceA - priceB) / ((priceA + priceB)/2) * 100;
-          if (priceDiff > 0.05) { // >0.05%
-            const profitETH = (amountIn * BigInt(priceDiff * 10)) / BigInt(1e18); // sim
+
+          // Only trigger if profit exceeds 0.05% AND covers the estimated slippage for the trade size
+          const slippageEstimate = (tradeAmountRaw > 100) ? 0.02 : 0.005; // Basic heuristic: larger trades = more slippage
+          
+          if (priceDiff > (0.05 + slippageEstimate)) { 
+            const profitETH = (amountIn * BigInt(Math.floor(priceDiff * 10))) / BigInt(1000); 
             const arbOpp: ArbOpportunity = {
               poolA: poolA as `0x${string}`,
               poolB: poolB as `0x${string}`,
@@ -195,20 +209,27 @@ const UNISWAP_V3_POOL_ABI = parseAbi(['function slot0() external view returns (u
 
     // Forging logic...
 if (activeStrategy.type === 'forging') {
-        // Real dynamic target discovery (no sim)
-        const targetTx = block.transactions.some((tx: any) => tx.from?.toLowerCase().includes('mev'));
-        if (targetTx) {
+        const targets = db.getTargetWallets().map(t => t.address.toLowerCase());
+        const detectedTx = (block.transactions as any[]).find((tx: any) => 
+          tx.from && targets.includes(tx.from.toLowerCase())
+        );
+
+        if (detectedTx) {
+          // Live Metrics: Update target performance on detection
+          const currentTrades = db.getTargetWallets().find(t => t.address.toLowerCase() === detectedTx.from.toLowerCase())?.tradesPerHour || 0;
+          db.updateTargetWalletMetrics(detectedTx.from, currentTrades + 1);
+
           db.incrementActiveOpps();
           db.getStats().botSystem.orchestrators += 1;
           this.emitBlockchainEvent({
               id: `det-${Date.now()}`,
               type: 'detect',
-              message: `Elite target detected: ${targetTx ? 'Real MEV tx' : 'Monitoring'} | Bundle ready`,
+              message: `Elite target detected: ${detectedTx.hash.slice(0, 10)} | Orchestrating Shadow Bundle`,
               category: 'detection',
               blockNumber: this.currentBlock,
               timestamp: new Date().toISOString()
           });
-          this.executeOnChainTrade(block.hash as Hash, activeStrategy);
+          this.executeOnChainTrade(detectedTx.hash as Hash, activeStrategy);
         }
       }
   }
@@ -326,10 +347,22 @@ return false;
   private calculateOptimalBribe(grossProfit: number, strategy: Strategy): number {
     // Minimum practical bribe to even be considered by builders (e.g., 0.5% of profit)
     const minPracticalBribe = grossProfit * 0.005;
+    const status = db.getEngineStatus();
 
-    // Auditor Fix: Remove modulo-based simulation. In Live mode, this should 
-    // scale based on baseFee/priorityFee volatility. Defaulting to a conservative mid-range.
-    const competitivePressure = 0.85; 
+    // Adjust pressure based on the selected Bribe Strategy in Settings
+    let competitivePressure = 0.85; // Dynamic default
+    switch (status.bribeStrategy) {
+      case 'conservative':
+        competitivePressure = 0.4;
+        break;
+      case 'aggressive':
+        competitivePressure = 0.98; // Extreme aggression to win blocks
+        break;
+      case 'dynamic':
+        // Dynamic bribe based on recent block saturation (placeholder logic for live volatility)
+        competitivePressure = Math.min(0.95, 0.6 + (db.getStats().totalTrades % 10) / 20);
+        break;
+    }
 
     // Strategy limit is now 70% as per user request
     const maxAllowedBribe = grossProfit * (strategy.config.maxBribePercent / 100);
@@ -368,7 +401,7 @@ return false;
 
       const contractAddress = strategy.config.contractAddress as `0x${string}`;
       const callData = strategy.config.callData as `0x${string}`;
-      const tradeSize = strategy.config.tradeAmount || 0.1; // Default to 0.1 ETH if not set
+      const tradeSize = strategy.config.tradeAmount || 1; 
 
       if (!contractAddress || !callData) {
         console.warn("[ENGINE] Real-time detection matched, but execution is paused: CONTRACT_ADDRESS or CALL_DATA not configured for strategy.");
@@ -387,16 +420,28 @@ return false;
       // Auditor Fix: Calculate dynamic bribe to ensure competitive inclusion 
       // while preserving the 30% Alpha rule.
       const expectedGrossProfit = strategy.config.minProfitThreshold || 0;
-      const bribeAmount = this.calculateOptimalBribe(expectedGrossProfit, strategy);
-      const bribeInWei = parseEther(bribeAmount.toString());
+      
+      // 1. Estimate Gas for the specific payload
+      const gasEstimate = await this.publicClient.estimateGas({
+        account: this.smartAccountClient.account,
+        to: contractAddress,
+        data: callData,
+        value: parseEther(tradeSize.toString()),
+      });
 
-      // Wait for transaction confirmation to ensure profit/execution is real
-      // @ts-ignore
+      // 2. Calculate the Bribe Amount in ETH
+      const bribeAmountEth = this.calculateOptimalBribe(expectedGrossProfit, strategy);
+      const bribeInWei = parseEther(bribeAmountEth.toString());
+
+      // 3. Convert absolute ETH bribe to Priority Fee (Wei per Gas)
+      // PriorityFee = TotalBribe / GasUsed
+      const priorityFeePerGas = bribeInWei / gasEstimate;
+
       const txHash = await this.smartAccountClient.sendTransaction({
         to: contractAddress,
         data: callData,
         value: parseEther(tradeSize.toString()),
-        maxPriorityFeePerGas: bribeInWei > 0n ? bribeInWei / 21000n : undefined // Convert profit bribe to priority fee
+        maxPriorityFeePerGas: priorityFeePerGas > 0n ? priorityFeePerGas : undefined
       });
 
       db.getStats().botSystem.executors = Math.min(8, db.getStats().botSystem.executors + 1);
@@ -419,7 +464,7 @@ return false;
       // In a live environment, the engine should parse logs/balance changes. 
       // For immediate feedback, we track the execution as successful with a placeholder 
       // strictly mapped to the configured threshold MINUS the bribe paid.
-      const actualProfit = (strategy.config.minProfitThreshold || 0) - bribeAmount;
+      const actualProfit = (strategy.config.minProfitThreshold || 0) - bribeAmountEth;
       
       if (actualProfit <= 0) {
           console.warn("[AUDITOR] Trade executed with 0 profit threshold logic. Check strategy configuration.");

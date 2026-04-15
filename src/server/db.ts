@@ -61,24 +61,24 @@ class Database {
   private strategies: Strategy[] = [
     {
       id: 's1',
-      name: 'Neural Forger: L1 Alpha Shadow',
+      name: 'Neural Forger: Elite Searcher Shadow',
       type: 'forging',
       status: 'active',
       config: {
         minProfitThreshold: 0.04,
         maxBribePercent: 70,
-        shadowTarget: '0xPlaceholder1'
+        shadowTarget: '0xae2Fc483527B8EF03308B936144b47B50b65a430'
       }
     },
     {
       id: 's2',
-      name: 'Cross-Chain Forging: Polygon/BSC',
+      name: 'Mempool Forger: High-Freq Arbitrage',
       type: 'forging',
       status: 'active',
       config: {
         minProfitThreshold: 0.02,
         maxBribePercent: 70,
-        shadowTarget: '0xPlaceholder2'
+        shadowTarget: '0x000000000000084e91423155140c817F316b5eb0'
       }
     }
   ];
@@ -191,80 +191,38 @@ private saveTimeout: NodeJS.Timeout | null = null;
     }, 500); // Debounce 500ms
   }
 
-getDynamicTargetWallets() {
-    // Dynamic discovery logic for elite MEV wallets
-    const dynamicTargets = [
-      {
-        address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', // Flashbots example
-        label: 'Flashbots Deployer',
-        chain: 'Ethereum',
-        strategies: ['Arbitrage', 'Liquidations'],
-        profitPerTrade: 0.15,
-        tradesPerHour: 8,
-        totalProfitDay: 1.2,
-        profitLast30Days: 45.3,
-        forgingEfficiency: 92,
-        winRate: 89,
-        daysActive: 120,
-        isMevResistant: true,
-        avgSlippageTolerance: 0.2,
-        executionLatency: 245
-      },
-      // Add more dynamic
-    ];
-    return dynamicTargets;
-  }
-
-  getTargetWallets() { return this.targetWallets.concat(this.getDynamicTargetWallets()); }
-
   private targetWallets: TargetWallet[] = [
     {
-      address: '0xPlaceholder1',
-      label: 'Placeholder Target 1',
+      address: '0xae2Fc483527B8EF03308B936144b47B50b65a430',
+      label: 'JaredFromSubway (MEV Bot)',
       chain: 'Ethereum',
       strategies: ['Arbitrage'],
-      profitPerTrade: 0,
+      profitPerTrade: 0.12,
       tradesPerHour: 0,
       totalProfitDay: 0,
       profitLast30Days: 0,
-      forgingEfficiency: 0,
-      winRate: 0,
-      daysActive: 0,
-      isMevResistant: false,
-      avgSlippageTolerance: 0,
-      executionLatency: 0
+      forgingEfficiency: 85,
+      winRate: 94,
+      daysActive: 340,
+      isMevResistant: true,
+      avgSlippageTolerance: 0.1,
+      executionLatency: 12
     },
     {
-      address: '0xPlaceholder2',
-      label: 'Placeholder Target 2',
-      chain: 'Polygon',
-      strategies: ['Arbitrage'],
-      profitPerTrade: 0,
+      address: '0x000000000000084e91423155140c817F316b5eb0',
+      label: 'Searcher (Bundle Specialist)',
+      chain: 'Ethereum',
+      strategies: ['Bundling', 'Sandwich'],
+      profitPerTrade: 0.08,
       tradesPerHour: 0,
       totalProfitDay: 0,
       profitLast30Days: 0,
-      forgingEfficiency: 0,
-      winRate: 0,
-      daysActive: 0,
-      isMevResistant: false,
-      avgSlippageTolerance: 0,
-      executionLatency: 0
-    },
-    {
-      address: '0xPlaceholder3',
-      label: 'Placeholder Target 3',
-      chain: 'BSC',
-      strategies: ['Arbitrage'],
-      profitPerTrade: 0,
-      tradesPerHour: 0,
-      totalProfitDay: 0,
-      profitLast30Days: 0,
-      forgingEfficiency: 0,
-      winRate: 0,
-      daysActive: 0,
-      isMevResistant: false,
-      avgSlippageTolerance: 0,
-      executionLatency: 0
+      forgingEfficiency: 91,
+      winRate: 88,
+      daysActive: 120,
+      isMevResistant: true,
+      avgSlippageTolerance: 0.05,
+      executionLatency: 8
     }
   ];
 
@@ -361,7 +319,8 @@ getDynamicTargetWallets() {
       if (this.stats.chartData.length > 20) this.stats.chartData.shift();
 
       // Architect Fix: Learning progress in Live Mode is an indicator of model stability
-      this.stats.learningProgress = Math.min(100, 90 + (this.stats.totalTrades / 100));
+      // Learning progress reflects the breadth of protocols/targets forged
+      this.stats.learningProgress = Math.min(100, (this.trades.length * 2) + (this.stats.shadowedWallets * 5));
       this.stats.shadowedWallets = this.getTargetWallets().length;
 
       const completed = this.trades.filter(t => t.status === 'completed');
@@ -376,7 +335,11 @@ getDynamicTargetWallets() {
       // Update average latency (weighted by total trades)
       // Real latency should be updated, tooltip: "Required for real on-chain execution and institutional security."
       const currentLatency = this.stats.avgLatency || 0; 
-      this.stats.avgLatency = Math.round(((this.stats.avgLatency * (this.stats.totalTrades - 1)) + currentLatency) / this.stats.totalTrades);
+      if (this.stats.totalTrades > 1) {
+        this.stats.avgLatency = Math.round(((this.stats.avgLatency * (this.stats.totalTrades - 1)) + currentLatency) / this.stats.totalTrades);
+      } else {
+        this.stats.avgLatency = currentLatency;
+      }
       
       // Active opportunities are updated by the engine's real-time detection
       // No more randomization here.
@@ -517,3 +480,18 @@ getDynamicTargetWallets() {
 }
 
 export const db = new Database();
+
+  updateTargetWalletMetrics(address: string, tradesPerHour: number) {
+    const target = this.targetWallets.find(t => t.address.toLowerCase() === address.toLowerCase());
+    if (target) {
+      target.tradesPerHour = tradesPerHour;
+      target.totalProfitDay = parseFloat((tradesPerHour * target.profitPerTrade).toFixed(3));
+      this.save();
+    }
+  }
+
+  updateSystemMetrics(cpu: number, mem: number) {
+    this.stats.botSystem.cpuUsage = cpu;
+    this.stats.botSystem.memoryUsage = mem;
+    // Save is handled by general throttled loop
+  }
